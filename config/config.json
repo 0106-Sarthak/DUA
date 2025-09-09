@@ -1,0 +1,9 @@
+{
+  "user_id": "testuser",
+  "host": "https://testhost.com",
+  "endpoints": {
+    "config": "/config/{{userId}}",
+    "report_upload": "/report/upload/{{userId}}"
+  },
+  "action_sheets": []
+}
