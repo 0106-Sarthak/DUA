@@ -260,8 +260,7 @@
 
 const fs = require("fs");
 const path = require("path");
-// const puppeteer = require("puppeteer");
-const puppeteer = require("puppeteer-core");
+const puppeteer = require("puppeteer");
 const { TimeoutError } = require("puppeteer");
 const FormData = require("form-data");
 const superagent = require("superagent");
@@ -301,9 +300,7 @@ if (!fs.existsSync(actionSheetsDir))
 // --------------------
 // Utility Functions
 // --------------------
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// Removed custom sleep function, use page.waitForTimeout instead
 
 const formatDate = (date) => {
   const day = String(date.getDate()).padStart(2, "0");
@@ -320,6 +317,10 @@ const generateDateForToken = (token) => {
   if (token === "yesterday") return getYesterday();
   return "";
 };
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // --------------------
 // User Input Store
@@ -377,7 +378,6 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
     // Launch Puppeteer
 
     browser = await puppeteer.launch({
-      executablePath: chromePath,
       headless: false,
       defaultViewport: null,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -399,7 +399,8 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
 
       try {
         // Wait 1-2 seconds before each action
-        await sleep(Math.floor(Math.random() * 1000) + 1000);
+        // Wait for a visible body as a generic delay
+        await page.waitForSelector("body", { visible: true, timeout: 60000 });
         console.log(`Executing action: ${action.type}`);
 
         switch (action.type) {
@@ -418,6 +419,11 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
 
           case "wait":
             console.log(`Waiting for ${action.duration}ms...`);
+            // // Wait for a visible body as a generic delay
+            // await page.waitForSelector("body", {
+            //   visible: true,
+            //   timeout: Math.max(action.duration, 1000),
+            // });
             await sleep(action.duration);
             break;
 
@@ -461,17 +467,21 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
 
             // Optionally wait after submitting
             if (action.waitAfterSubmit) {
-              console.log(
-                `Waiting ${action.waitAfterSubmit}ms after submit...`
-              );
-              await page.waitForTimeout(action.waitAfterSubmit);
+              console.log(`Waiting after submit...`);
+              await page.waitForSelector("body", {
+                visible: true,
+                timeout: Math.max(action.waitAfterSubmit, 1000),
+              });
             }
             break;
 
           case "navigation":
             await page.waitForSelector(action.selector, { timeout: 60000 });
             if (action.waitBeforeInteraction)
-              await sleep(action.waitBeforeInteraction);
+              await page.waitForSelector("body", {
+                visible: true,
+                timeout: Math.max(action.waitBeforeInteraction, 1000),
+              });
             await page.click(action.selector);
 
             if (action.initiatesDownload) {
@@ -505,62 +515,113 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
               }
             }
             break;
-          
-          // case "click":
-          //   console.log("Executing click:", action.description || action.selector);
-          //   console.log(`Waiting for selector: ${action.selector}`);
-          //   await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
-          //   console.log(`Selector found: ${action.selector}`);
-          //   await page.click(action.selector);
-          //   console.log(`Clicked on: ${action.selector}`);
-          //   break;
 
           case "click":
-            console.log("Executing click:", action.description || action.selector);
+            console.log(
+              "Executing click:",
+              action.description || action.selector
+            );
+
             if (action.selector.startsWith("//")) {
-                console.log(`Waiting for XPath: ${action.selector}`);
-                await page.waitForXPath(action.selector, { visible: true, timeout: 60000 });
-                const elements = await page.$x(action.selector);
-                if (elements.length > 0) {
-                    console.log(`XPath found: ${action.selector}`);
-                    await elements[0].click();
-                    console.log(`Clicked on element found by XPath: ${action.selector}`);
-                } else {
-                    throw new Error(`XPath not found: ${action.selector}`);
-                }
+              console.log(`Waiting for XPath: ${action.selector}`);
+
+              try {
+                // Wait until element appears in the DOM
+                await page.waitForFunction(
+                  (xpath) => {
+                    const result = document.evaluate(
+                      xpath,
+                      document,
+                      null,
+                      XPathResult.FIRST_ORDERED_NODE_TYPE,
+                      null
+                    );
+                    return result.singleNodeValue || null;
+                  },
+                  { timeout: 60000 },
+                  action.selector
+                );
+
+                await page.evaluate(() => {
+                  const links = Array.from(
+                    document.querySelectorAll("a")
+                  ).filter((a) => a.textContent.includes("MIS - Spares"));
+
+                  if (links.length === 0) {
+                    console.error("No links found containing 'MIS - Spares'");
+                    return;
+                  }
+                  console.log(
+                    `Found ${links.length} link(s) containing 'MIS - Spares'.`
+                  );
+
+                  links.forEach((link, index) => {
+                    console.log(`Checking link ${index + 1}:`, link.outerHTML);
+
+                    const onclickCode = link.getAttribute("onclick");
+                    if (onclickCode) {
+                      console.log(
+                        `Executing onclick on link ${index + 1}:`,
+                        onclickCode
+                      );
+                      try {
+                        eval(onclickCode);
+                        console.log(
+                          `Navigation triggered for link ${index + 1}.`
+                        );
+                      } catch (err) {
+                        console.error(
+                          `Error executing onclick on link ${index + 1}:`,
+                          err
+                        );
+                      }
+                    } else {
+                      console.log(`No onclick attribute on link ${index + 1}.`);
+                    }
+                  });
+                });
+              } catch (err) {
+                console.error("Error waiting for XPath:", err.message);
+              }
             } else {
-                console.log(`Waiting for selector: ${action.selector}`);
-                await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
-                console.log(`Selector found: ${action.selector}`);
+              console.log(`Waiting for selector: ${action.selector}`);
+
+              try {
+                await page.waitForSelector(action.selector, {
+                  visible: true,
+                  timeout: 60000,
+                });
+
+                console.log("Selector found, scrolling into view.");
+
+                await page.evaluate((selector) => {
+                  const el = document.querySelector(selector);
+                  if (el) el.scrollIntoView({ block: "center" });
+                }, action.selector);
+
+                console.log("Triggering native click event.");
                 await page.click(action.selector);
-                console.log(`Clicked on: ${action.selector}`);
+
+                console.log("Click executed, waiting for navigation.");
+                await page.waitForTimeout(3000); // Adjust timing if necessary
+              } catch (err) {
+                console.error(
+                  "Error clicking element for selector:",
+                  err.message
+                );
+              }
             }
             break;
 
-          // case "logout":
-          //   console.log("Executing logout");
-
-          //   // Step 1 – Click the Settings button
-          //   const settingsSelector = "li#tb_0";
-          //   console.log(`Waiting for Settings button: ${settingsSelector}`);
-          //   await page.waitForSelector(settingsSelector, { visible: true, timeout: 60000 });
-          //   console.log("Settings button found, clicking...");
-          //   await page.click(settingsSelector);
-
-            
-          //   // Step 2 – Click the Logout button
-          //   const logoutSelector = "button.siebui-ctrl-btn.appletButton.siebui-btn-logout";
-          //   console.log(`Waiting for Logout button: ${logoutSelector}`);
-          //   await page.waitForSelector(logoutSelector, { visible: true, timeout: 60000 });
-          //   console.log("Logout button found, clicking...");
-          //   await page.click(logoutSelector);
-
-          //   console.log("Logout action completed.");
-          //   break;
-
           case "type":
-            console.log("Executing type:", action.description || action.selector);
-            await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
+            console.log(
+              "Executing type:",
+              action.description || action.selector
+            );
+            await page.waitForSelector(action.selector, {
+              visible: true,
+              timeout: 60000,
+            });
             await page.type(action.selector, action.value, { delay: 100 });
             console.log("Typing completed.");
             break;
@@ -569,15 +630,20 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             console.log("Executing logout");
 
             if (!action.steps || !Array.isArray(action.steps)) {
-                console.error("Logout steps not defined or invalid.");
-                break;
+              console.error("Logout steps not defined or invalid.");
+              break;
             }
 
             for (const step of action.steps) {
-                console.log(`Waiting for: ${step.description} (${step.selector})`);
-                await page.waitForSelector(step.selector, { visible: true, timeout: 60000 });
-                console.log(`Found ${step.description}, clicking...`);
-                await page.click(step.selector);
+              console.log(
+                `Waiting for: ${step.description} (${step.selector})`
+              );
+              await page.waitForSelector(step.selector, {
+                visible: true,
+                timeout: 60000,
+              });
+              console.log(`Found ${step.description}, clicking...`);
+              await page.click(step.selector);
             }
 
             console.log("Logout action completed.");
