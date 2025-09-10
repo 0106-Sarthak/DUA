@@ -17,6 +17,7 @@
     "electron": "^38.0.0",
     "form-data": "^4.0.4",
     "fs-extra": "^11.3.1",
+    "mssql": "^11.0.1",
     "puppeteer": "^24.19.0",
     "puppeteer-core": "^24.19.0",
     "require-and-forget": "^1.0.1",

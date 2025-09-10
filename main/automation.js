@@ -505,6 +505,83 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
               }
             }
             break;
+          
+          // case "click":
+          //   console.log("Executing click:", action.description || action.selector);
+          //   console.log(`Waiting for selector: ${action.selector}`);
+          //   await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
+          //   console.log(`Selector found: ${action.selector}`);
+          //   await page.click(action.selector);
+          //   console.log(`Clicked on: ${action.selector}`);
+          //   break;
+
+          case "click":
+            console.log("Executing click:", action.description || action.selector);
+            if (action.selector.startsWith("//")) {
+                console.log(`Waiting for XPath: ${action.selector}`);
+                await page.waitForXPath(action.selector, { visible: true, timeout: 60000 });
+                const elements = await page.$x(action.selector);
+                if (elements.length > 0) {
+                    console.log(`XPath found: ${action.selector}`);
+                    await elements[0].click();
+                    console.log(`Clicked on element found by XPath: ${action.selector}`);
+                } else {
+                    throw new Error(`XPath not found: ${action.selector}`);
+                }
+            } else {
+                console.log(`Waiting for selector: ${action.selector}`);
+                await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
+                console.log(`Selector found: ${action.selector}`);
+                await page.click(action.selector);
+                console.log(`Clicked on: ${action.selector}`);
+            }
+            break;
+
+          // case "logout":
+          //   console.log("Executing logout");
+
+          //   // Step 1 – Click the Settings button
+          //   const settingsSelector = "li#tb_0";
+          //   console.log(`Waiting for Settings button: ${settingsSelector}`);
+          //   await page.waitForSelector(settingsSelector, { visible: true, timeout: 60000 });
+          //   console.log("Settings button found, clicking...");
+          //   await page.click(settingsSelector);
+
+            
+          //   // Step 2 – Click the Logout button
+          //   const logoutSelector = "button.siebui-ctrl-btn.appletButton.siebui-btn-logout";
+          //   console.log(`Waiting for Logout button: ${logoutSelector}`);
+          //   await page.waitForSelector(logoutSelector, { visible: true, timeout: 60000 });
+          //   console.log("Logout button found, clicking...");
+          //   await page.click(logoutSelector);
+
+          //   console.log("Logout action completed.");
+          //   break;
+
+          case "type":
+            console.log("Executing type:", action.description || action.selector);
+            await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
+            await page.type(action.selector, action.value, { delay: 100 });
+            console.log("Typing completed.");
+            break;
+
+          case "logout":
+            console.log("Executing logout");
+
+            if (!action.steps || !Array.isArray(action.steps)) {
+                console.error("Logout steps not defined or invalid.");
+                break;
+            }
+
+            for (const step of action.steps) {
+                console.log(`Waiting for: ${step.description} (${step.selector})`);
+                await page.waitForSelector(step.selector, { visible: true, timeout: 60000 });
+                console.log(`Found ${step.description}, clicking...`);
+                await page.click(step.selector);
+            }
+
+            console.log("Logout action completed.");
+            break;
 
           case "close":
             console.log("Closing browser...");

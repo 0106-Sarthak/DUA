@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Define file paths
-const PROPER_DIRNAME = path.join(__dirname, '..'); // adjust if needed
+const PROPER_DIRNAME = path.join(__dirname, '..');
 const configFilePath = path.join(PROPER_DIRNAME, 'config', 'config.json');
 const userInputFilePath = path.join(PROPER_DIRNAME, 'config', 'user-input.json');
 

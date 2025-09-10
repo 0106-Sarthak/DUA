@@ -3,6 +3,7 @@ const path = require("path");
 const setupIPC = require("./ipc");
 const fs = require("fs");
 const automation = require("./automation");
+const sheetSync = require("./sheet-sync");
 
 const configFilePath = path.join(__dirname, "../config/config.json");
 
@@ -24,6 +25,10 @@ app.whenReady().then(() => {
   createWindow();
 
   setupIPC();
+
+  // sheetSync.run();
+
+  console.log("sheetSync Completed");
 
   const configManager = require("./config-manager");
   const config = configManager.getConfig();
