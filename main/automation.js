@@ -524,7 +524,7 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
 
             if (action.selector.startsWith("//")) {
               console.log(`Waiting for XPath: ${action.selector}`);
-
+              
               try {
                 // Wait until element appears in the DOM
                 await page.waitForFunction(
@@ -584,6 +584,7 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                 console.error("Error waiting for XPath:", err.message);
               }
             } else {
+              // CSS selector path
               console.log(`Waiting for selector: ${action.selector}`);
 
               try {
@@ -591,9 +592,11 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                   visible: true,
                   timeout: 60000,
                 });
-
-                console.log("Selector found, scrolling into view.");
-
+                console.log(
+                  "Selector found, scrolling into view.",
+                  action.selector
+                );
+                
                 await page.evaluate((selector) => {
                   const el = document.querySelector(selector);
                   if (el) el.scrollIntoView({ block: "center" });
@@ -603,13 +606,23 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                 await page.click(action.selector);
 
                 console.log("Click executed, waiting for navigation.");
-                await page.waitForTimeout(3000); // Adjust timing if necessary
               } catch (err) {
                 console.error(
                   "Error clicking element for selector:",
                   err.message
                 );
               }
+            }
+            break;
+
+          case "keyboard" :
+            console.log(
+              "Executing keyboard action:",
+              action.description || action.key
+            );
+            if (action.key) {
+              await page.keyboard.press(action.key, { delay: 100 });
+              console.log(`Pressed key: ${action.key}`);
             }
             break;
 
