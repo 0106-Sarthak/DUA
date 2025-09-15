@@ -1,261 +1,3 @@
-// const configManager = require('./config-manager');
-// const path = require('path');
-// const fs = require('fs');
-
-// let busy = false; // Prevent overlapping runs
-
-// const automationDir = path.join(__dirname, '../data/reports');
-// if (!fs.existsSync(automationDir)) fs.mkdirSync(automationDir, { recursive: true });
-
-// /**
-//  * This function will start your automation.
-//  * Right now it just logs config and user inputs.
-//  * Later you can integrate Puppeteer scripts and action sheet execution here.
-//  */
-// const start = async () => {
-//   if (busy) return;
-//   busy = true;
-
-//   try {
-//     const config = configManager.getConfig();
-//     const userInputs = configManager.getUserInputs();
-
-//     if (!config || !config.user_id || !config.host) {
-//       console.log('Config not found. Cannot start automation.');
-//       busy = false;
-//       return;
-//     }
-
-//     console.log('Automation started...');
-//     console.log('Config:', config);
-//     console.log('User Inputs:', userInputs);
-
-//     // TODO: Load action sheets from local folder and execute
-//     const actionSheetsDir = path.join(__dirname, '../action-sheets');
-//     const actionSheets = fs.existsSync(actionSheetsDir)
-//       ? fs.readdirSync(actionSheetsDir).map(file => path.join(actionSheetsDir, file))
-//       : [];
-
-//     for (const sheetPath of actionSheets) {
-//       try {
-//         const actionSheet = require(sheetPath);
-//         console.log(`Executing action sheet: ${sheetPath}`);
-//         // TODO: call your Puppeteer functions here with actionSheet
-//       } catch (err) {
-//         console.error('Error loading action sheet:', sheetPath, err);
-//       }
-//     }
-
-//     console.log('Automation cycle complete.');
-//   } catch (err) {
-//     console.error('Error during automation:', err);
-//   }
-
-//   busy = false;
-// };
-
-// // Export start() so main/index.js can call it
-// module.exports = {
-//   start,
-// };
-
-// const path = require('path');
-// const fs = require('fs');
-// const puppeteer = require('puppeteer');
-// const superagent = require('superagent');
-// const FormData = require('form-data');
-// const cronParser = require('cron-parser');
-// const { parse, format } = require('date-fns');
-
-// const configManager = require('./config-manager');
-
-// const reportsDir = path.join(__dirname, '../data/reports');
-// if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
-
-// let busy = false;
-// let alreadyRan = {}; // Track last run for cron expressions
-// let userInputStore = {};
-
-// const refreshUserInputs = async () => {
-//   userInputStore = configManager.getUserInputs();
-// };
-
-// // ------------------ Helper Functions ------------------ //
-
-// function sleep(ms) {
-//   return new Promise(resolve => setTimeout(resolve, ms));
-// }
-
-// function getUserInput(actionSheetId, token) {
-//   if (userInputStore && userInputStore[actionSheetId] && userInputStore[actionSheetId].inputs) {
-//     return userInputStore[actionSheetId].inputs[token] || '';
-//   }
-//   return '';
-// }
-
-// function generateDateForToken(token) {
-//   // Very simple implementation, expand as needed
-//   const today = new Date();
-//   if (token === 'today') return format(today, 'dd/MM/yyyy');
-//   if (token === 'yesterday') return format(new Date(today.setDate(today.getDate() - 1)), 'dd/MM/yyyy');
-//   return '';
-// }
-
-// // ------------------ File Upload ------------------ //
-
-// async function uploadReport(filePath, config) {
-//   try {
-//     const form = new FormData();
-//     form.append('file', fs.createReadStream(filePath));
-
-//     const uploadUrl = config.host + config.endpoints.report_upload.replace('{{userId}}', config.user_id);
-//     const response = await superagent.post(uploadUrl).attach('file', fs.createReadStream(filePath));
-//     console.log('Uploaded report:', filePath);
-//   } catch (err) {
-//     console.error('Upload failed:', err.message);
-//   }
-// }
-
-// // ------------------ Puppeteer Automation ------------------ //
-
-// async function executeActionSheet(actionSheet, actionSheetId, config) {
-//   const browser = await puppeteer.launch({
-//     executablePath: './chrome/chrome.exe',
-//     headless: actionSheet?.headless !== 0,
-//     defaultViewport: null,
-//   });
-
-//   const page = await browser.newPage();
-//   await page.setCacheEnabled(false);
-//   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.140 Safari/537.36');
-
-//   let jumpToNextReport = false;
-
-//   for (const key in actionSheet.actions) {
-//     const action = actionSheet.actions[key];
-
-//     if (jumpToNextReport && action.type !== 'report-breakpoint') continue;
-
-//     try {
-//       if (action.log?.info) console.log(action.log.info);
-
-//       // Random delay 1-2 sec
-//       await sleep(Math.random() * 1000 + 1000);
-
-//       switch (action.type) {
-//         case 'launch':
-//           await page.goto(action.site, { waitUntil: 'networkidle2' });
-//           break;
-
-//         case 'login':
-//           for (const field of action.fields) {
-//             const value = field.useUserInput ? getUserInput(actionSheetId, field.inputToken) : field.value;
-//             await page.waitForSelector(field.selector, { timeout: 60000 });
-//             await page.type(field.selector, value);
-//           }
-//           await page.click(action.submit.selector);
-//           break;
-
-//         case 'navigation':
-//           await page.waitForSelector(action.selector, { timeout: action.customSelectorTimeout || 60000 });
-//           if (action.waitBeforeInteraction) await sleep(action.waitBeforeInteraction);
-
-//           // Handle file download
-//           if (action.initiatesDownload) {
-//             const client = await page.target().createCDPSession();
-//             await client.send('Browser.setDownloadBehavior', {
-//               behavior: 'allowAndName',
-//               downloadPath: reportsDir,
-//               eventsEnabled: true,
-//             });
-//           }
-
-//           await page.click(action.selector);
-
-//           // TODO: wait and rename downloaded file if needed
-//           break;
-
-//         case 'input':
-//           await page.waitForSelector(action.selector, { timeout: action.customSelectorTimeout || 60000 });
-//           if (action.waitBeforeInteraction) await sleep(action.waitBeforeInteraction);
-
-//           let inputValue = action.useUserInput ? getUserInput(actionSheetId, action.inputToken) : action.value;
-//           if (inputValue.includes('{{')) inputValue = generateDateForToken(inputValue.replace('{{', '').replace('}}', ''));
-
-//           if (action.interaction === 'keyinput') await page.type(action.selector, inputValue);
-//           if (action.interaction === 'select') await page.select(action.selector, inputValue);
-//           break;
-
-//         case 'close':
-//           await browser.close();
-//           break;
-//       }
-//     } catch (err) {
-//       console.error('Action execution failed:', err);
-//       jumpToNextReport = true;
-//     }
-//   }
-
-//   await browser.close();
-// }
-
-// // ------------------ Main Automation Loop ------------------ //
-
-// const start = async () => {
-//   if (busy) return;
-//   busy = true;
-//   console.log('Automation cycle started...');
-//   const config = configManager.getConfig();
-//   if (!config || !config.user_id || !config.host) {
-//     console.log('No valid config. Automation will not run.');
-//     busy = false;
-//     return;
-//   }
-
-//   console.log('Current Config:', config);
-//   await refreshUserInputs();
-
-//   const actionSheetsDir = path.join(__dirname, '../action-sheets');
-//   const sheets = fs.existsSync(actionSheetsDir)
-//     ? fs.readdirSync(actionSheetsDir).map(f => path.join(actionSheetsDir, f))
-//     : [];
-
-//   console.log('Action Sheets Found:', sheets);
-
-//   const now = new Date();
-//   for (const sheetPath of sheets) {
-//     try {
-//       const sheet = require(sheetPath);
-
-//       // Check cron runtimes
-//       console.log('Checking runtimes for sheet:', sheet.id);
-//       let shouldRun = false;
-//       for (const rtKey in sheet.config?.runtimes || {}) {
-//         try {
-//           const interval = cronParser.parseExpression(sheet.config.runtimes[rtKey], { currentDate: new Date(now.getTime() - 1000) });
-//           const next = interval.next().toDate();
-//           if (Math.abs(next.getTime() - now.getTime()) < 1000 && (!alreadyRan[sheet.id] || alreadyRan[sheet.id].getTime() !== next.getTime())) {
-//             shouldRun = true;
-//             alreadyRan[sheet.id] = next;
-//             break;
-//           }
-//         } catch {}
-//       }
-
-//       if (shouldRun) {
-//         console.log('Executing action sheet:', sheetPath);
-//         await executeActionSheet(sheet, sheet.id, config);
-//       }
-//     } catch (err) {
-//       console.error('Failed to load action sheet:', sheetPath, err);
-//     }
-//   }
-
-//   busy = false;
-// };
-
-// module.exports = { start };
-
 // ---- puppeteer automation.js ---- //
 
 const fs = require("fs");
@@ -279,7 +21,9 @@ console.log("Project dir:", PROJECT_DIR);
 
 // Electron app path
 const { app } = require("electron");
+const appPath = app.getAppPath();
 const PROPER_DIRNAME = path.join(PROJECT_DIR, "userData");
+// const PROPER_DIRNAME = path.join(app.getPath("userData"));*
 
 if (!fs.existsSync(PROPER_DIRNAME)) {
   fs.mkdirSync(PROPER_DIRNAME, { recursive: true });
@@ -375,8 +119,6 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
   let page;
 
   try {
-    // Launch Puppeteer
-
     browser = await puppeteer.launch({
       headless: false,
       defaultViewport: null,
@@ -414,6 +156,14 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
               console.log("Navigation complete:", action.site);
             } catch (err) {
               console.error("Navigation failed:", err.message);
+              // Attempt a reload
+              try {
+                console.log("Attempting to reload the page...");
+                await page.reload({ waitUntil: "networkidle2", timeout: 60000 });
+                console.log("Reload successful");
+              } catch (reloadErr) {
+                console.error("Reload failed:", reloadErr.message);
+              }
             }
             break;
 
@@ -523,8 +273,8 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             );
 
             if (action.selector.startsWith("//")) {
+              action.selector = action.selector.replace("{{searchText}}", action.searchText);
               console.log(`Waiting for XPath: ${action.selector}`);
-              
               try {
                 // Wait until element appears in the DOM
                 await page.waitForFunction(
@@ -542,17 +292,17 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                   action.selector
                 );
 
-                await page.evaluate(() => {
+                await page.evaluate((searchText) => {
                   const links = Array.from(
                     document.querySelectorAll("a")
-                  ).filter((a) => a.textContent.includes("MIS - Spares"));
+                  ).filter((a) => a.textContent.includes(`${searchText}`));
 
                   if (links.length === 0) {
-                    console.error("No links found containing 'MIS - Spares'");
+                    console.error(`No links found containing '${searchText}'`);
                     return;
                   }
                   console.log(
-                    `Found ${links.length} link(s) containing 'MIS - Spares'.`
+                    `Found ${links.length} link(s) containing '${searchText}'.`
                   );
 
                   links.forEach((link, index) => {
@@ -576,10 +326,29 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                         );
                       }
                     } else {
-                      console.log(`No onclick attribute on link ${index + 1}.`);
+                      const link = Array.from(document.querySelectorAll("a"))
+                        .find(a => a.textContent.trim() === "" + searchText + "");
+
+                      const eventOptions = { bubbles: true, cancelable: true, view: window };
+                      link.dispatchEvent(new MouseEvent("mouseover", eventOptions));
+                      link.dispatchEvent(new MouseEvent("mousedown", eventOptions));
+                      link.dispatchEvent(new MouseEvent("mouseup", eventOptions));
+                      link.dispatchEvent(new MouseEvent("click", eventOptions));
+                      
+                      // link.click(link);
+                      // if (link) {
+                      //   console.log("Clicking link...");
+                      //   link.click();
+                      // } else {
+                      //   console.error("Link not found.");
+                      // }
+                      // console.log("Clicking element normally.");
+                      // console.log("clicking link:", link.outerHTML);
+                      // link.click();
+                      console.log("Click executed.");
                     }
                   });
-                });
+                }, action.searchText);
               } catch (err) {
                 console.error("Error waiting for XPath:", err.message);
               }
@@ -807,7 +576,7 @@ async function main() {
 // Start loop every 2 seconds
 function start() {
   console.log("Automation started...");
-  setInterval(main, 20000);
+  setInterval(main, 2000);
 }
 
 module.exports = { start };
