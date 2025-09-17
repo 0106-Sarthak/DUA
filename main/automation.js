@@ -126,7 +126,19 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
     });
 
     page = await browser.newPage();
-    console.log("Browser and page initialized");
+
+    // Listen for dialog popups like 'beforeunload'
+    page.on('dialog', async dialog => {
+      console.log(`Dialog appeared: ${dialog.message()}`);
+
+      if (dialog.type() === 'beforeunload') {
+        console.log("Handling 'beforeunload' dialog: leaving the page...");
+        await dialog.accept(); // Automatically click "Leave"
+      } else {
+        console.log(`Handling ${dialog.type()} dialog: dismissing`);
+        await dialog.dismiss(); // Ignore other dialogs
+      }
+    });
 
     await page.setCacheEnabled(false);
     await page.setUserAgent(
@@ -314,16 +326,13 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                         `Executing onclick on link ${index + 1}:`,
                         onclickCode
                       );
-                      try {
+                      if (onclickCode.trim().startsWith("return")) {
+                        const code = onclickCode.replace(/^return\s+/, "");
+                        console.log(`Executing onclick after removing 'return':`, code);
+                        eval(code);
+                      } else {
+                        console.log(`Executing onclick as is:`, onclickCode);
                         eval(onclickCode);
-                        console.log(
-                          `Navigation triggered for link ${index + 1}.`
-                        );
-                      } catch (err) {
-                        console.error(
-                          `Error executing onclick on link ${index + 1}:`,
-                          err
-                        );
                       }
                     } else {
                       const link = Array.from(document.querySelectorAll("a"))
@@ -334,17 +343,6 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                       link.dispatchEvent(new MouseEvent("mousedown", eventOptions));
                       link.dispatchEvent(new MouseEvent("mouseup", eventOptions));
                       link.dispatchEvent(new MouseEvent("click", eventOptions));
-                      
-                      // link.click(link);
-                      // if (link) {
-                      //   console.log("Clicking link...");
-                      //   link.click();
-                      // } else {
-                      //   console.error("Link not found.");
-                      // }
-                      // console.log("Clicking element normally.");
-                      // console.log("clicking link:", link.outerHTML);
-                      // link.click();
                       console.log("Click executed.");
                     }
                   });
@@ -375,6 +373,30 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                 await page.click(action.selector);
 
                 console.log("Click executed, waiting for navigation.");
+
+                // flag to determine the download behavior
+                if (action.initiatesDownload) {
+                  console.log("Setting up download behavior...");
+
+                  const client = await page.createCDPSession();
+                  await client.send("Browser.setDownloadBehavior", {
+                    behavior: "allowAndName",
+                    downloadPath: reportDownloadDir,
+                    eventsEnabled: true,
+                  });
+
+                  const prefix = action.filePrefix || "report";
+                  const readableDate = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+                  const finalFilePath = await waitUntilDownload(
+                    client,
+                    reportDownloadDir,
+                    readableDate + "-" + prefix + "-"
+                  );
+
+                  console.log("Download completed:", finalFilePath);
+                  // Clean up session after download
+                  await client.detach();
+                }
               } catch (err) {
                 console.error(
                   "Error clicking element for selector:",
