@@ -37,9 +37,9 @@ app.whenReady().then(() => {
   }
 
   // Start automation if config exists
-  //   if (fs.existsSync(configFilePath)) {
-  //     automation.start();
-  //   }
+    if (fs.existsSync(configFilePath)) {
+      automation.start();
+    }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

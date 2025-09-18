@@ -1,5 +1,2 @@
-node_modules/
-.env
-userData
-dist/
-saved/
+/app/node_modules
+/installer/node_modules

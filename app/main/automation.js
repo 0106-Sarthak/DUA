@@ -21,6 +21,7 @@ console.log("Project dir:", PROJECT_DIR);
 
 // Electron app path
 const { app } = require("electron");
+const { act } = require("react");
 const appPath = app.getAppPath();
 const PROPER_DIRNAME = path.join(PROJECT_DIR, "userData");
 // const PROPER_DIRNAME = path.join(app.getPath("userData"));*
@@ -44,7 +45,7 @@ if (!fs.existsSync(actionSheetsDir))
 // --------------------
 // Utility Functions
 // --------------------
-// Removed custom sleep function, use page.waitForTimeout instead
+
 
 const formatDate = (date) => {
   const day = String(date.getDate()).padStart(2, "0");
@@ -114,6 +115,7 @@ async function waitUntilDownload(session, downloadPath = "", fileName = "") {
   });
 }
 
+// Main function to execute action sheet
 const initiateProcess = async (sheetId, actionSheet, configuration) => {
   let browser;
   let page;
@@ -385,8 +387,8 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                     eventsEnabled: true,
                   });
 
-                  const prefix = action.filePrefix || "report";
-                  const readableDate = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+                  const prefix = action.filePrefix || "";
+                  const readableDate = format(new Date(), "yyyyMMdd_HHmmss");
                   const finalFilePath = await waitUntilDownload(
                     client,
                     reportDownloadDir,

@@ -1,0 +1,54 @@
+Installation creates a base config (config.json) with your user_id, installation_id, and API endpoints.
+
+The action sheets themselves are not included at installation — they are dynamic.
+
+The app fetches them from a remote API using the info in config.json.
+
+Once downloaded, the app executes them according to the config.
+
+
+Installation
+
+Script creates config.json:
+
+{
+  "user_id": "testuser",
+  "host": "https://api.example.com",
+  "endpoints": {
+    "action_sheets": "/action-sheets/{userId}"
+  },
+  "action_sheets": []
+}
+
+
+App startup
+
+Reads config.json → knows where the API is (host + endpoints.action_sheets) and what user/installation it is.
+
+Fetch action sheets
+
+App hits GET https://api.example.com/action-sheets/testuser
+
+API returns a JSON array of action sheets:
+
+[
+  {
+    "id": "sheet-1",
+    "name": "sheet-1",
+    "script_url": "https://api.example.com/scripts/sheet-1.js",
+    "schedule": "* * * * *"
+  }
+]
+
+
+Download and store
+
+App downloads the scripts to a local folder, e.g., ~/dua-client/action-sheets/.
+
+Updates config.json.action_sheets to include metadata like id, name, path, and schedule.
+
+Execution
+
+App reads config.json.action_sheets → knows what scripts to run and when.
+
+Scheduler (cron or internal timer) executes them according to schedule.

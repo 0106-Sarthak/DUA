@@ -21,6 +21,7 @@
     "fs-extra": "^11.3.1",
     "mssql": "^11.0.1",
     "puppeteer": "^24.19.0",
+    "react": "^19.1.1",
     "require-and-forget": "^1.0.1",
     "superagent": "^10.2.3"
   },

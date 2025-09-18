@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DUA Automation Setup</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input { margin-bottom: 10px; width: 300px; padding: 5px; }
+    button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    #edit-button { background-color: #28a745; }
+    #edit-button:hover { background-color: #218838; }
+  </style>
+</head>
+<body>
+  <h1>DUA Automation Setup</h1>
+
+  <form id="setup-form">
+    <label>User ID:</label>
+    <input type="text" id="userId" placeholder="Enter your User ID" disabled required>
+
+    <label>Password:</label>
+    <input type="password" id="password" placeholder="Enter your Password" disabled required>
+
+    <label>Insight ID:</label>
+    <input type="text" id="insightId" placeholder="Enter Insight ID" disabled required>
+
+    <label>Insight Password:</label>
+    <input type="password" id="insightPassword" placeholder="Enter Insight Password" disabled required>
+
+    <label>Quantity Condition:</label>
+    <input type="text" id="qtyCondition" placeholder="Enter quantity condition" disabled>
+
+    <button type="submit" id="save-button" style="display: none;">Save Credentials</button>
+    <button type="button" id="edit-button" style="display: none;">Edit Credentials</button>
+  </form>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
