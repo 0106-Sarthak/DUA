@@ -26,6 +26,7 @@
     "superagent": "^10.2.3"
   },
   "devDependencies": {
+    "@ljharb/tsconfig": "^0.3.2",
     "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
     "electron-rebuild": "^3.2.9"

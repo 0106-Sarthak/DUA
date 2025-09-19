@@ -432,6 +432,25 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             console.log("Typing completed.");
             break;
 
+          case "upload":
+            const inputUploadHandle = await page.$(action.selector);
+            if (inputUploadHandle) {
+              await inputUploadHandle.uploadFile(action.filePath);
+              console.log(`Uploaded file: ${action.filePath}`);
+            } else {
+              console.log(`Could not find upload input: ${action.selector}`);
+            }
+            break;
+
+          case "select":
+            try {
+              await page.select(action.selector, action.value);
+              console.log(`✅ Selected value '${action.value}' for ${action.selector}`);
+            } catch (err) {
+              console.error(`❌ Failed to select '${action.value}' for ${action.selector}:`, err);
+            }
+            break;
+
           case "logout":
             console.log("Executing logout");
 
