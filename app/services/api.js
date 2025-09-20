@@ -1,77 +1,56 @@
 // api.js
+const fs = require('fs');
+const path = require('path');
+
 const superagent = require("superagent");
 
-const API_BASE_URL = ""; 
+const BASE_DIR = "C:\\dua-data";
+const actionSheetsDir = path.join(BASE_DIR, "sheets");
 
-async function fetchActionSheet(sheetId) {
-  try {
-    const response = await superagent.get(`${API_BASE_URL}/action-sheets/${sheetId}`);
-    return response.body;
-  } catch (error) {
-    console.error(`Error fetching action sheet ${sheetId}:`, error.message);
-    throw error;
+async function fetchRemoteSheets(userId) {
+  console.log("Fetching sheets for user:", userId);
+
+  // Ensure action-sheets folder exists
+  if (!fs.existsSync(actionSheetsDir)) {
+    fs.mkdirSync(actionSheetsDir, { recursive: true });
   }
+
+  // Dummy example data (replace with API call later)
+  const sheets = [
+    {
+      id: "test-sheet",
+      name: "sheet-2",
+      downloadUrl: "https://audit-leads-docs.s3.ap-south-1.amazonaws.com/1757413201487_test-sheet.json",
+      config: {
+        runtimes: {
+          every_minute: "* * * * *"
+        }
+      }
+    }
+  ];
+
+  // Download each sheet
+  for (const sheet of sheets) {
+    try {
+      const res = await fetch(sheet.downloadUrl);
+      console.log(`Downloading sheet from: ${sheet.downloadUrl}`);
+      if (!res.ok) throw new Error(`Failed to download ${sheet.name}`);
+      const content = await res.text();
+
+      const filePath = path.join(actionSheetsDir, sheet.name + path.extname(sheet.downloadUrl));
+      fs.writeFileSync(filePath, content, "utf8");
+      console.log(`Downloaded sheet: ${sheet.name} → ${filePath}`);
+
+      // Remove the downloadUrl from sheet metadata before appending
+      delete sheet.downloadUrl;
+
+    } catch (err) {
+      console.error(`Error downloading sheet ${sheet.name}:`, err);
+    }
+  }
+
+  return sheets;
 }
 
-async function uploadReport(userId, filePath, config) {
-  try {
-    const url = `${config.host}${config.endpoints.report_upload.replace("{{userId}}", userId)}`;
-    const response = await superagent
-      .post(url)
-      .attach("file", require("fs").createReadStream(filePath));
-    return response.body;
-  } catch (error) {
-    console.error("Error uploading report:", error.message);
-    throw error;
-  }
-}
-
-// You can add more API functions here as needed
-
-module.exports = {
-  fetchActionSheet,
-  uploadReport,
-};
-
-
-// api.js
-const axios = require("axios");
-
-const API_BASE = "https://testhost.com"; // change to your backend
-
-async function fetchConfig(userId) {
-  try {
-    const res = await axios.get(`${API_BASE}/config/${userId}`);
-    return res.data;
-  } catch (err) {
-    console.error("❌ Error fetching config:", err.message);
-    return null;
-  }
-}
-
-async function uploadReport(userId, reportData) {
-  try {
-    const res = await axios.post(`${API_BASE}/report/upload/${userId}`, reportData);
-    return res.data;
-  } catch (err) {
-    console.error("❌ Error uploading report:", err.message);
-    return null;
-  }
-}
-
-async function fetchSheets(userId) {
-  try {
-    const res = await axios.get(`${API_BASE}/sheets/${userId}`);
-    return res.data; // could be list of sheet metadata
-  } catch (err) {
-    console.error("❌ Error fetching sheets:", err.message);
-    return [];
-  }
-}
-
-module.exports = {
-  fetchConfig,
-  fetchSheets,
-  uploadReport,
-};
+module.exports = { fetchRemoteSheets };
 

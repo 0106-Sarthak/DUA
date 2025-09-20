@@ -11,6 +11,26 @@ const userInputFilePath = path.join(BASE_DIR, 'config', 'user-input.json');
 console.log('Config file path:', configFilePath);
 console.log('User input file path:', userInputFilePath);
 
+function appendActionSheet(sheet) {
+  const config = getConfig();
+
+  if (!Array.isArray(config.action_sheets)) {
+    config.action_sheets = [];
+  }
+
+  // Prevent duplicates based on sheet ID
+  const existingIds = new Set(config.action_sheets.map(s => s.id));
+  if (!existingIds.has(sheet.id)) {
+    config.action_sheets.push(sheet);
+    saveConfig(config);
+    console.log(`Action sheet appended: ${sheet.name}`);
+  } else {
+    console.log(`Action sheet already exists: ${sheet.name}`);
+  }
+
+  return config;
+}
+
 
 // Ensure files exist
 function ensureFile(filePath, defaultData = {}) {
@@ -85,5 +105,6 @@ module.exports = {
   getConfig,
   saveConfig,
   getUserInputs,
-  saveUserInputs
+  saveUserInputs,
+  appendActionSheet
 };

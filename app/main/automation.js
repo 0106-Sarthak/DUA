@@ -554,7 +554,7 @@ async function main() {
     }
 
     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-    // console.log("Loaded configuration:", JSON.stringify(configuration, null, 2));
+    console.log("Loaded configuration:", JSON.stringify(configuration, null, 2));
 
     // Refresh user input
     await refreshUserInput();
