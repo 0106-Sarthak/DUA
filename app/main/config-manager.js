@@ -1,14 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 
-// Define file paths
-const PROPER_DIRNAME = path.join(__dirname, '..');
-const configFilePath = path.join(PROPER_DIRNAME, 'config', 'config.json');
-const userInputFilePath = path.join(PROPER_DIRNAME, 'config', 'user-input.json');
+// Use the global dua-data folder (created by installer)
+const BASE_DIR = "C:\\dua-data";
+// const BASE_DIR = process.env.DUA_DATA_PATH || "C:\\dua-data";
 
-console.log('PROPER_DIRNAME from config-manager.js:', PROPER_DIRNAME);
-console.log('Config file path from config-manager.js:', configFilePath);
-console.log('User input file path from config-manager.js:', userInputFilePath);
+const configFilePath = path.join(BASE_DIR, 'config', 'config.json');
+const userInputFilePath = path.join(BASE_DIR, 'config', 'user-input.json');
+
+console.log('Config file path:', configFilePath);
+console.log('User input file path:', userInputFilePath);
+
 
 // Ensure files exist
 function ensureFile(filePath, defaultData = {}) {

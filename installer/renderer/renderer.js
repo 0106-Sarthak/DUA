@@ -1,5 +1,5 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const root = document.getElementById('app');
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("app");
 
   root.innerHTML = `
     <h2>Enter Secret Key</h2>
@@ -8,11 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     <button id="verifyBtn">Verify & Install</button>
   `;
 
-  const keyInput = document.getElementById('secretKey');
-  const errorDiv = document.getElementById('error');
-  const verifyBtn = document.getElementById('verifyBtn');
+  const keyInput = document.getElementById("secretKey");
+  const errorDiv = document.getElementById("error");
+  const verifyBtn = document.getElementById("verifyBtn");
 
-  verifyBtn.addEventListener('click', async () => {
+  verifyBtn.addEventListener("click", async () => {
     const key = keyInput.value.trim();
 
     if (!key) {
@@ -22,26 +22,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     errorDiv.textContent = "";
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = "Verifying...";
 
-    if (key === "12345") {
-      try {
-        // show "installing..." feedback
-        verifyBtn.disabled = true;
-        verifyBtn.textContent = "Installing...";
+    try {
+      // Verify key via API
+      const res = await fetch("http://localhost:4000/verify-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
 
-        const out = await window.electronAPI.runInstall();
-        console.log("Install output:", out);
+      const data = await res.json();
 
-        alert("Installation completed. Installer will close now.");
-        window.close();
-      } catch (err) {
-        console.error("Install failed:", err);
-        errorDiv.textContent = "Install failed: " + err;
-        verifyBtn.disabled = false;
-        verifyBtn.textContent = "Verify & Install";
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Verification failed");
       }
-    } else {
-      errorDiv.textContent = "Invalid key (use 12345 for testing)";
+
+      const userID = data.user_id;
+      const dealerName = data.dealer_name;
+      console.log("Verification successful. UserID:", userID);
+
+      // Run installer script via IPC (folders created + config written)
+      verifyBtn.textContent = "Installing...";
+      const out = await window.electronAPI.runInstall(userID, dealerName);
+      console.log("Installation output:", out);
+
+      alert(`Installation completed for user: ${userID}`);
+      window.close();
+    } catch (err) {
+      console.error("Verification/Install failed:", err);
+      errorDiv.textContent = "Error: " + err.message;
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = "Verify & Install";
     }
   });
 });

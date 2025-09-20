@@ -5,7 +5,7 @@ const fs = require("fs");
 const automation = require("./automation");
 const sheetSync = require("./sheet-sync");
 
-const configFilePath = path.join(__dirname, "../config/config.json");
+const configFilePath = "C:\\dua-data\\config\\config.json";
 
 function createWindow() {
   const win = new BrowserWindow({

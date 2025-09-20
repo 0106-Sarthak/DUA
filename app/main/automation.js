@@ -16,27 +16,37 @@ const { parse, format } = require("date-fns");
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 console.log("Chrome executable path:", chromePath);
 
-const PROJECT_DIR = path.resolve(__dirname, "..");
-console.log("Project dir:", PROJECT_DIR);
+const BASE_DIR = process.env.DUA_DATA_PATH || "C:\\dua-data";
+console.log("Project dir:", BASE_DIR);
 
 // Electron app path
 const { app } = require("electron");
-const { act } = require("react");
 const appPath = app.getAppPath();
-const PROPER_DIRNAME = path.join(PROJECT_DIR, "userData");
+
 // const PROPER_DIRNAME = path.join(app.getPath("userData"));*
 
-if (!fs.existsSync(PROPER_DIRNAME)) {
-  fs.mkdirSync(PROPER_DIRNAME, { recursive: true });
+// Ensure base directories exist
+if (!fs.existsSync(BASE_DIR)) {
+  fs.mkdirSync(BASE_DIR, { recursive: true });
 }
 
-const configFilePath = path.join(PROPER_DIRNAME, "config.json");
-const userInputFilePath = path.join(PROPER_DIRNAME, "user-input.json");
-const actionSheetsDir = path.join(PROPER_DIRNAME, "action-sheets");
+const configFilePath = path.join(BASE_DIR, "config", "config.json");
+const userInputFilePath = path.join(BASE_DIR, "config", "user-input.json");
+const actionSheetsDir = path.join(BASE_DIR, "sheets");
+const logsDir = path.join(BASE_DIR, "logs");
+const reportsDir = path.join(BASE_DIR, "reports");
+
+[ path.dirname(configFilePath), logsDir, reportsDir, actionSheetsDir ].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 console.log("Config file path:", configFilePath);
-console.log("Action sheets dir:", actionSheetsDir);
 console.log("User input file path:", userInputFilePath);
+console.log("Action sheets dir:", actionSheetsDir);
+console.log("Logs dir:", logsDir);
+console.log("Reports dir:", reportsDir);
 
 // Ensure action-sheets folder exists
 if (!fs.existsSync(actionSheetsDir))
@@ -88,7 +98,7 @@ const getUserInput = (sheetId, token) => {
 // --------------------
 // Puppeteer & ActionSheet Executor
 // --------------------
-const reportDownloadDir = path.join(PROPER_DIRNAME, "reports");
+const reportDownloadDir = path.join(BASE_DIR, "reports");
 
 if (!fs.existsSync(reportDownloadDir))
   fs.mkdirSync(reportDownloadDir, { recursive: true });

@@ -32,3 +32,46 @@ module.exports = {
   fetchActionSheet,
   uploadReport,
 };
+
+
+// api.js
+const axios = require("axios");
+
+const API_BASE = "https://testhost.com"; // change to your backend
+
+async function fetchConfig(userId) {
+  try {
+    const res = await axios.get(`${API_BASE}/config/${userId}`);
+    return res.data;
+  } catch (err) {
+    console.error("❌ Error fetching config:", err.message);
+    return null;
+  }
+}
+
+async function uploadReport(userId, reportData) {
+  try {
+    const res = await axios.post(`${API_BASE}/report/upload/${userId}`, reportData);
+    return res.data;
+  } catch (err) {
+    console.error("❌ Error uploading report:", err.message);
+    return null;
+  }
+}
+
+async function fetchSheets(userId) {
+  try {
+    const res = await axios.get(`${API_BASE}/sheets/${userId}`);
+    return res.data; // could be list of sheet metadata
+  } catch (err) {
+    console.error("❌ Error fetching sheets:", err.message);
+    return [];
+  }
+}
+
+module.exports = {
+  fetchConfig,
+  fetchSheets,
+  uploadReport,
+};
+

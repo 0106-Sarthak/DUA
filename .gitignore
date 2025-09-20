@@ -1,2 +1,4 @@
 /app/node_modules
 /installer/node_modules
+
+/dummy-server
