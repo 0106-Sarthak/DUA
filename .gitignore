@@ -1,4 +1,6 @@
 /app/node_modules
 /installer/node_modules
-
+/installer/dist
+/installer/packaged-app
+/app/packaged-app
 /dummy-server

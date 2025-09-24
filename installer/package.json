@@ -1,15 +1,34 @@
 {
   "name": "installer",
   "version": "1.0.0",
-  "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "electron": "^38.1.2"
+  "devDependencies": {
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.yourcompany.installer",
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "buildResources": "resources"
+    },
+    "files": [
+      "main.js",
+      "ipc.js",
+      "preload.js",
+      "renderer/**",
+      "scripts/**",
+      "packaged-app/**"
+    ],
+    "asarUnpack": [
+      "scripts/**",
+      "packaged-app/**"
+    ]
   }
 }
