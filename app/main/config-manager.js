@@ -31,7 +31,6 @@ function appendActionSheet(sheet) {
   return config;
 }
 
-
 // Ensure files exist
 function ensureFile(filePath, defaultData = {}) {
   console.log(`Ensuring file exists: ${filePath}`);

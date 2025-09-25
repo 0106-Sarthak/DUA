@@ -13,10 +13,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const verifyBtn = document.getElementById("verifyBtn");
 
   verifyBtn.addEventListener("click", async () => {
-    const key = keyInput.value.trim();
+    const secretKey = keyInput.value.trim();
 
-    if (!key) {
-      errorDiv.textContent = "Please enter a key";
+    if (!secretKey) {
+      errorDiv.textContent = "Please enter a secret key";
       keyInput.focus();
       return;
     }
@@ -27,16 +27,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       // Verify key via API
-      const res = await fetch("http://localhost:4000/verify-key", {
+      const res = await fetch("http://localhost:4000/users/verify-key", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
+        body: JSON.stringify({ secretKey }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Verification failed");
+      }
+
+      console.log("User data:", data);
+
+      // if already active user, just alert and close
+      if (data.active) {
+        alert("This user is already active. You can close this window.");
+        window.close();
+        return;
       }
 
       const userID = data.user_id;
