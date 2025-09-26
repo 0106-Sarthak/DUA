@@ -7,7 +7,7 @@ const sheetSync = require("./sheet-sync");
 const configManager = require("./config-manager");
 const api = require("../services/api");
 
-const configFilePath = "C:\\dua-data\\config\\config.json";
+// const configFilePath = "C:\\dua-data\\config\\config.json";
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -47,20 +47,23 @@ app.whenReady().then(async () => {
   setupIPC();
 
   const config = configManager.getConfig();
-  if (config && config.user_id && config.verified) {
-    // Append sheets dynamically
-    console.log("User verified. Fetching and appending action sheets...");
-    await fetchAndAppendSheets(config.user_id);
+  automation.start(config);
+  
+  // code to fetch and append sheets, then start automation if user inputs exist
+  // if (config && config.user_id && config.verified) {
+  //   // Append sheets dynamically
+  //   console.log("User verified. Fetching and appending action sheets...");
+  //   await fetchAndAppendSheets(config.user_id);
 
-    const userInputs = configManager.getUserInputs();
+  //   const userInputs = configManager.getUserInputs();
 
-    if (userInputs && Object.keys(userInputs).length > 0) {
-      console.log("User inputs found. Starting automation...");
-      automation.start(configManager.getConfig());
-    } else {
-      console.log("User inputs missing. Automation will not start yet.");
-    }
-  }
+  //   if (userInputs && Object.keys(userInputs).length > 0) {
+  //     console.log("User inputs found. Starting automation...");
+  //     automation.start(configManager.getConfig());
+  //   } else {
+  //     console.log("User inputs missing. Automation will not start yet.");
+  //   }
+  // }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

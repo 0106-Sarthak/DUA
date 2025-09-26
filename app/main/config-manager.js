@@ -2,8 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 // Use the global dua-data folder (created by installer)
-const BASE_DIR = "C:\\dua-data";
+// const BASE_DIR = "C:\\dua-data";
 // const BASE_DIR = process.env.DUA_DATA_PATH || "C:\\dua-data";
+const BASE_DIR = path.join(__dirname, '../data');
 
 const configFilePath = path.join(BASE_DIR, 'config', 'config.json');
 const userInputFilePath = path.join(BASE_DIR, 'config', 'user-input.json');

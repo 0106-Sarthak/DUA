@@ -16,7 +16,8 @@ const { parse, format } = require("date-fns");
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 console.log("Chrome executable path:", chromePath);
 
-const BASE_DIR = process.env.DUA_DATA_PATH || "C:\\dua-data";
+// const BASE_DIR = process.env.DUA_DATA_PATH || "C:\\dua-data";
+const BASE_DIR = path.join(__dirname, "../data");
 console.log("Project dir:", BASE_DIR);
 
 // Electron app path
@@ -36,11 +37,13 @@ const actionSheetsDir = path.join(BASE_DIR, "sheets");
 const logsDir = path.join(BASE_DIR, "logs");
 const reportsDir = path.join(BASE_DIR, "reports");
 
-[ path.dirname(configFilePath), logsDir, reportsDir, actionSheetsDir ].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+[path.dirname(configFilePath), logsDir, reportsDir, actionSheetsDir].forEach(
+  (dir) => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
   }
-});
+);
 
 console.log("Config file path:", configFilePath);
 console.log("User input file path:", userInputFilePath);
@@ -62,6 +65,23 @@ const formatDate = (date) => {
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 };
+
+function getDynamicDate(monthsAgo) {
+  const today = new Date();
+
+  // subtract specified months
+  today.setMonth(today.getMonth() - monthsAgo);
+
+  // set to 1st day of that month
+  today.setDate(1);
+
+  // format as dd/mm/yyyy
+  const day = String(today.getDate()).padStart(2, "0");
+  const month = String(today.getMonth() + 1).padStart(2, "0"); // months are 0-based
+  const year = today.getFullYear();
+
+  return `>=${day}/${month}/${year}`;
+}
 
 const getCurrentDate = () => formatDate(new Date());
 const getYesterday = () => formatDate(new Date(Date.now() - 86400000));
@@ -139,10 +159,10 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
     page = await browser.newPage();
 
     // Listen for dialog popups like 'beforeunload'
-    page.on('dialog', async dialog => {
+    page.on("dialog", async (dialog) => {
       console.log(`Dialog appeared: ${dialog.message()}`);
 
-      if (dialog.type() === 'beforeunload') {
+      if (dialog.type() === "beforeunload") {
         console.log("Handling 'beforeunload' dialog: leaving the page...");
         await dialog.accept(); // Automatically click "Leave"
       } else {
@@ -182,7 +202,10 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
               // Attempt a reload
               try {
                 console.log("Attempting to reload the page...");
-                await page.reload({ waitUntil: "networkidle2", timeout: 60000 });
+                await page.reload({
+                  waitUntil: "networkidle2",
+                  timeout: 60000,
+                });
                 console.log("Reload successful");
               } catch (reloadErr) {
                 console.error("Reload failed:", reloadErr.message);
@@ -296,7 +319,10 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             );
 
             if (action.selector.startsWith("//")) {
-              action.selector = action.selector.replace("{{searchText}}", action.searchText);
+              action.selector = action.selector.replace(
+                "{{searchText}}",
+                action.searchText
+              );
               console.log(`Waiting for XPath: ${action.selector}`);
               try {
                 // Wait until element appears in the DOM
@@ -339,20 +365,36 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                       );
                       if (onclickCode.trim().startsWith("return")) {
                         const code = onclickCode.replace(/^return\s+/, "");
-                        console.log(`Executing onclick after removing 'return':`, code);
+                        console.log(
+                          `Executing onclick after removing 'return':`,
+                          code
+                        );
                         eval(code);
                       } else {
                         console.log(`Executing onclick as is:`, onclickCode);
                         eval(onclickCode);
                       }
                     } else {
-                      const link = Array.from(document.querySelectorAll("a"))
-                        .find(a => a.textContent.trim() === "" + searchText + "");
+                      const link = Array.from(
+                        document.querySelectorAll("a")
+                      ).find(
+                        (a) => a.textContent.trim() === "" + searchText + ""
+                      );
 
-                      const eventOptions = { bubbles: true, cancelable: true, view: window };
-                      link.dispatchEvent(new MouseEvent("mouseover", eventOptions));
-                      link.dispatchEvent(new MouseEvent("mousedown", eventOptions));
-                      link.dispatchEvent(new MouseEvent("mouseup", eventOptions));
+                      const eventOptions = {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                      };
+                      link.dispatchEvent(
+                        new MouseEvent("mouseover", eventOptions)
+                      );
+                      link.dispatchEvent(
+                        new MouseEvent("mousedown", eventOptions)
+                      );
+                      link.dispatchEvent(
+                        new MouseEvent("mouseup", eventOptions)
+                      );
                       link.dispatchEvent(new MouseEvent("click", eventOptions));
                       console.log("Click executed.");
                     }
@@ -374,11 +416,20 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                   "Selector found, scrolling into view.",
                   action.selector
                 );
-                
-                await page.evaluate((selector) => {
-                  const el = document.querySelector(selector);
-                  if (el) el.scrollIntoView({ block: "center" });
-                }, action.selector);
+
+                // await page.evaluate((selector) => {
+                //   const el = document.querySelector(selector);
+                //   if (el) el.scrollIntoView({ block: "center" });
+                // }, action.selector);
+
+                await page.waitForFunction(
+                  (selector) => {
+                    const el = document.querySelector(selector);
+                    return el && !el.disabled;
+                  },
+                  { timeout: 60000 },
+                  action.selector
+                );
 
                 console.log("Triggering native click event.");
                 await page.click(action.selector);
@@ -417,7 +468,7 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             }
             break;
 
-          case "keyboard" :
+          case "keyboard":
             console.log(
               "Executing keyboard action:",
               action.description || action.key
@@ -433,11 +484,19 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
               "Executing type:",
               action.description || action.selector
             );
+
+            let value = action.value;
+
+            if (value === "dynamic-date") {
+              value = getDynamicDate(action.month);
+              console.log("Using dynamic date:", value);
+            }
+            console.log("typed in ", action.selector, " value: ", value);
             await page.waitForSelector(action.selector, {
               visible: true,
               timeout: 60000,
             });
-            await page.type(action.selector, action.value, { delay: 100 });
+            await page.type(action.selector, value, { delay: 100 });
             console.log("Typing completed.");
             break;
 
@@ -454,9 +513,14 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
           case "select":
             try {
               await page.select(action.selector, action.value);
-              console.log(`✅ Selected value '${action.value}' for ${action.selector}`);
+              console.log(
+                `✅ Selected value '${action.value}' for ${action.selector}`
+              );
             } catch (err) {
-              console.error(`❌ Failed to select '${action.value}' for ${action.selector}:`, err);
+              console.error(
+                `❌ Failed to select '${action.value}' for ${action.selector}:`,
+                err
+              );
             }
             break;
 
@@ -553,7 +617,10 @@ async function main() {
     }
 
     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-    console.log("Loaded configuration:", JSON.stringify(configuration, null, 2));
+    console.log(
+      "Loaded configuration:",
+      JSON.stringify(configuration, null, 2)
+    );
 
     // Refresh user input
     await refreshUserInput();

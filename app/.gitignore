@@ -3,3 +3,5 @@ node_modules/
 userData
 dist/
 saved/
+data/reports/
+sheets/

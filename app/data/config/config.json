@@ -1,0 +1,19 @@
+{
+  "user_id": "testuser",
+  "host": "https://testhost.com",
+  "endpoints": {
+    "config": "/config/{{userId}}",
+    "report_upload": "/report/upload/{{userId}}"
+  },
+  "action_sheets": [
+    {
+      "id": "test-sheet",
+      "name": "sheet-1",
+      "config": {
+        "runtimes": {
+          "every_minute": "* * * * *"
+        }
+      }
+    }
+  ]
+}
