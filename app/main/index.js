@@ -45,10 +45,36 @@ app.whenReady().then(async () => {
   createWindow();
 
   setupIPC();
-
+  // automation.start(config);
   const config = configManager.getConfig();
-  automation.start(config);
-  
+  const userInputs = configManager.getUserInputs();
+
+  async function runAllSheets() {
+    for (const sheet of config.action_sheets) {
+      const sheetId = sheet.id;
+      const credsArray = userInputs[sheetId]?.inputs || [];
+
+      for (const creds of credsArray) {
+        console.log(`🚀 Running sheet "${sheetId}" for user "${creds.userId}"`);
+
+        // Set current run creds so automation can pick them
+        configManager.setCurrentRunInputs(sheetId, creds);
+
+        try {
+          await automation.start({
+            ...sheet.config,
+            inputs: creds, // pass single creds object
+          });
+          console.log(`✅ Completed for ${creds.userId}`);
+        } catch (err) {
+          console.error(`❌ Failed for ${creds.userId}:`, err);
+        }
+      }
+    }
+  }
+
+  runAllSheets();
+
   // code to fetch and append sheets, then start automation if user inputs exist
   // if (config && config.user_id && config.verified) {
   //   // Append sheets dynamically

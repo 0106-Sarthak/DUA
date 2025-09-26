@@ -27,6 +27,7 @@ const setupIPC = () => {
     console.log("IPC: get-user-inputs called");
     const inputs = configManager.getUserInputs();
     console.log("User inputs returned:", inputs);
+    console.log("User inputs returned2:", JSON.stringify(inputs, null, 2));
     return inputs;
   });
 

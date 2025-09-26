@@ -11,6 +11,7 @@ const CronExpressionParser =
   cronParser.CronExpressionParser || cronParser.default;
 const forget = require("require-and-forget");
 const { parse, format } = require("date-fns");
+const configManager = require("./config-manager");
 
 // Set Chrome executable path for Windows
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
@@ -159,15 +160,21 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
     page = await browser.newPage();
 
     // Listen for dialog popups like 'beforeunload'
-    page.on("dialog", async (dialog) => {
-      console.log(`Dialog appeared: ${dialog.message()}`);
+    let loginFailed = false;
+    let loginBlocked = false;
 
-      if (dialog.type() === "beforeunload") {
-        console.log("Handling 'beforeunload' dialog: leaving the page...");
-        await dialog.accept(); // Automatically click "Leave"
+    page.on("dialog", async (dialog) => {
+      const msg = dialog.message();
+      console.log(`Dialog appeared: ${msg}`);
+
+      if (msg.includes("Max Concurrent Sessions")) {
+        console.log(
+          "Max concurrent sessions reached. Dismissing dialog and skipping login..."
+        );
+        await dialog.dismiss();
+        loginBlocked = true;
       } else {
-        console.log(`Handling ${dialog.type()} dialog: dismissing`);
-        await dialog.dismiss(); // Ignore other dialogs
+        await dialog.dismiss();
       }
     });
 
@@ -179,6 +186,10 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
     // Process each action
     for (const key in actionSheet.actions) {
       const action = actionSheet.actions[key];
+      if (loginFailed) {
+        console.log("Skipping remaining actions due to login failure");
+        break;
+      }
       console.log("\nAction raw object:", action);
       console.log("Processing action:", action.type);
 
@@ -233,12 +244,18 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             }
 
             for (const field of action.fields) {
-              console.log(`Processing field selector: ${field.selector}`);
-              await page.waitForSelector(field.selector, { timeout: 60000 });
-              const value = field.useUserInput
-                ? getUserInput(sheetId, field.inputToken)
-                : field.value;
-              console.log(`Typing into ${field.selector}: ${value}`);
+              // console.log(`Processing field selector: ${field.selector}`);
+              // await page.waitForSelector(field.selector, { timeout: 60000 });
+              // const value = field.useUserInput
+              //   ? getUserInput(sheetId, field.inputToken)
+              //   : field.value;
+              // console.log(`Typing into ${field.selector}: ${value}`);
+              let value;
+              if (field.useUserInput) {
+                value = configManager.getUserInput(sheetId, field.inputToken);
+              } else {
+                value = field.value;
+              }
               await page.type(field.selector, value);
             }
 
@@ -260,7 +277,7 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
             } else {
               console.warn("Submit action not defined or missing selector.");
             }
-
+            console.log("Login action completed, waiting for navigation...");
             // Optionally wait after submitting
             if (action.waitAfterSubmit) {
               console.log(`Waiting after submit...`);
@@ -269,6 +286,44 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
                 timeout: Math.max(action.waitAfterSubmit, 1000),
               });
             }
+
+            console.log("Checking for login failure indicators...");
+            // Check for login failure indicators
+            try {
+              loginFailed = await page.waitForFunction(
+                () => {
+                  // Check for error message
+                  const errEl = document.querySelector(
+                    "#statusBar.siebui-error"
+                  );
+                  if (errEl) {
+                    const text = errEl.innerText || "";
+                    if (
+                      text.includes("incorrect") ||
+                      text.includes("SBL-UIF-00272")
+                    )
+                      return true;
+                  }
+
+                  // Optionally, check for element that confirms successful login
+                  const successEl = document.querySelector(
+                    "#some-dashboard-element"
+                  );
+                  if (successEl) return false;
+
+                  // Keep waiting
+                  return undefined;
+                },
+                { timeout: 7000 }
+              ); // wait max 7s
+            } catch (err) {
+              // Timeout, assume login succeeded if no error appeared
+              loginFailed = false;
+            }
+            if (loginBlocked) {
+              loginFailed = true;
+            }
+            console.log("Login failed status:", loginFailed);
             break;
 
           case "navigation":
@@ -566,6 +621,8 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
       console.log("Browser closed");
     }
   }
+
+  return !loginFailed;
 };
 
 // --------------------
@@ -603,6 +660,97 @@ const downloadFileAs = async (url, savePath) => {
   });
 };
 
+// async function main() {
+//   if (busy) return;
+//   busy = true;
+
+//   try {
+//     console.log("Checking configuration...");
+
+//     if (!fs.existsSync(configFilePath)) {
+//       console.log("Configuration file not found at", configFilePath);
+//       busy = false;
+//       return;
+//     }
+
+//     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
+//     console.log(
+//       "Loaded configuration:",
+//       JSON.stringify(configuration, null, 2)
+//     );
+
+//     // Refresh user input
+//     await refreshUserInput();
+
+//     // Iterate action sheets
+//     for (const sheet of configuration.action_sheets || []) {
+//       const sheetPath = path.join(actionSheetsDir, sheet.name + ".json");
+//       console.log("Checking action sheet:", sheet.name);
+
+//       if (!fs.existsSync(sheetPath)) {
+//         console.log(`Action sheet file not found at ${sheetPath}`);
+//         continue;
+//       }
+
+//       const actionSheet = forget(sheetPath);
+
+//       console.log("Sheet object:", JSON.stringify(sheet, null, 2));
+//       // console.log("Sheet config:", JSON.stringify(sheet.config, null, 2));
+//       // console.log("Runtimes:", JSON.stringify(sheet.config?.runtimes || {}, null, 2));
+
+//       let shouldRun = false;
+//       const now = new Date();
+
+//       for (const cronExpr of Object.values(sheet.config?.runtimes || {})) {
+//         try {
+//           console.log(`Evaluating cron expression: ${cronExpr}`);
+
+//           // Use CronExpressionParser.parse for cron-parser >=5.x
+//           const interval = CronExpressionParser.parse(cronExpr, {
+//             currentDate: new Date(now.getTime() - 1000),
+//           });
+//           const next = interval.next().toDate();
+
+//           console.log(
+//             `Cron schedule for ${
+//               sheet.name
+//             }: next run at ${next.toISOString()}, now is ${now.toISOString()}`
+//           );
+
+//           if (
+//             Math.abs(next.getTime() - now.getTime()) < 60000 &&
+//             (!alreadyRan[sheet.id] ||
+//               alreadyRan[sheet.id].getTime() !== next.getTime())
+//           ) {
+//             console.log(`Action sheet ${sheet.name} is scheduled to run now.`);
+//             shouldRun = true;
+//             alreadyRan[sheet.id] = next;
+//             break;
+//           } else {
+//             console.log(`Action sheet ${sheet.name} is not due yet.`);
+//           }
+//         } catch (err) {
+//           console.error(`Cron error in ${sheet.name}:`, err.message);
+//         }
+//       }
+
+//       if (shouldRun) {
+//         console.log(`Running action sheet ${sheet.name}...`);
+//         await initiateProcess(sheet.id, actionSheet, configuration);
+//         console.log(`Finished running action sheet ${sheet.name}.`);
+//       } else {
+//         console.log(`Skipping action sheet ${sheet.name}.`);
+//       }
+//     }
+//   } catch (err) {
+//     console.error("Automation main loop error:", err);
+//   }
+
+//   busy = false;
+// }
+
+// Start loop every 2 seconds
+
 async function main() {
   if (busy) return;
   busy = true;
@@ -622,7 +770,7 @@ async function main() {
       JSON.stringify(configuration, null, 2)
     );
 
-    // Refresh user input
+    // Refresh user inputs
     await refreshUserInput();
 
     // Iterate action sheets
@@ -638,17 +786,13 @@ async function main() {
       const actionSheet = forget(sheetPath);
 
       console.log("Sheet object:", JSON.stringify(sheet, null, 2));
-      // console.log("Sheet config:", JSON.stringify(sheet.config, null, 2));
-      // console.log("Runtimes:", JSON.stringify(sheet.config?.runtimes || {}, null, 2));
 
+      // Check if this sheet is scheduled to run now
       let shouldRun = false;
       const now = new Date();
 
       for (const cronExpr of Object.values(sheet.config?.runtimes || {})) {
         try {
-          console.log(`Evaluating cron expression: ${cronExpr}`);
-
-          // Use CronExpressionParser.parse for cron-parser >=5.x
           const interval = CronExpressionParser.parse(cronExpr, {
             currentDate: new Date(now.getTime() - 1000),
           });
@@ -669,20 +813,50 @@ async function main() {
             shouldRun = true;
             alreadyRan[sheet.id] = next;
             break;
-          } else {
-            console.log(`Action sheet ${sheet.name} is not due yet.`);
           }
         } catch (err) {
           console.error(`Cron error in ${sheet.name}:`, err.message);
         }
       }
 
-      if (shouldRun) {
-        console.log(`Running action sheet ${sheet.name}...`);
-        await initiateProcess(sheet.id, actionSheet, configuration);
-        console.log(`Finished running action sheet ${sheet.name}.`);
-      } else {
+      if (!shouldRun) {
         console.log(`Skipping action sheet ${sheet.name}.`);
+        continue;
+      }
+
+      // Run the sheet for each user
+      const credsArray = userInputStore[sheet.id]?.inputs || [];
+      if (credsArray.length === 0) {
+        console.log(`No user inputs found for sheet ${sheet.name}, skipping.`);
+        continue;
+      }
+
+      for (const creds of credsArray) {
+        console.log(`Running sheet ${sheet.name} for user ${creds.userId}`);
+        // Set current run inputs so actions can access them
+        configManager.setCurrentRunInputs(sheet.id, creds);
+
+        try {
+          const loginSucceeded = await initiateProcess(
+            sheet.id,
+            actionSheet,
+            configuration
+          );
+          if (!loginSucceeded) {
+            console.log(
+              `Login failed for user ${creds.userId}, skipping remaining actions.`
+            );
+            continue; // skip this user
+          }
+          console.log(
+            `Finished running sheet ${sheet.name} for user ${creds.userId}`
+          );
+        } catch (err) {
+          console.error(
+            `Error running sheet ${sheet.name} for user ${creds.userId}:`,
+            err.message
+          );
+        }
       }
     }
   } catch (err) {
@@ -692,7 +866,6 @@ async function main() {
   busy = false;
 }
 
-// Start loop every 2 seconds
 function start() {
   console.log("Automation started...");
   setInterval(main, 2000);

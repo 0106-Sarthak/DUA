@@ -11,7 +11,7 @@
       "name": "sheet-1",
       "config": {
         "runtimes": {
-          "every_minute": "* * * * *"
+            "every_hour": "* * * * *"
         }
       }
     }

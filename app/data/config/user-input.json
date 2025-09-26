@@ -1,8 +1,9 @@
 {
   "test-sheet": {
-    "inputs": {
-      "userId": "BNARUKA_1003540",
-      "password": "Sep@1234567"
-    }
+    "inputs": [
+      { "userId": "RC_1007200", "password": "Gvpl@1007200" },
+      { "userId": "LRAIKA1001330", "password": "Jhalawar@2025" },
+      { "userId": "BNARUKA_1003540", "password": "Sep@1234567" }
+    ]
   }
 }

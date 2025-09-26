@@ -101,10 +101,28 @@ function saveUserInputs(newInputs) {
   }
 }
 
+let currentRunInputs = {}; // stores the creds for the current automation run
+
+function setCurrentRunInputs(sheetId, creds) {
+  currentRunInputs[sheetId] = creds;
+}
+
+function getUserInput(sheetId, token) {
+  const creds = currentRunInputs[sheetId];
+  if (!creds) {
+    console.warn(`No current credentials found for sheet: ${sheetId}`);
+    return null;
+  }
+  return creds[token] || null;
+}
+
+
 module.exports = {
   getConfig,
   saveConfig,
   getUserInputs,
   saveUserInputs,
-  appendActionSheet
+  appendActionSheet,
+   setCurrentRunInputs,
+  getUserInput
 };

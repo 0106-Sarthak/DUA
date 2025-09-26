@@ -170,6 +170,7 @@
       "type": "click",
       "selector": "button[aria-label='Export:Next']",
       "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "Purchase_Line_Items",
       "initiatesDownload": true
     },
     "30": {
@@ -247,6 +248,7 @@
       "type": "click",
       "selector": "button[aria-label='Export:Next']",
       "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "Purchase_Line_PO",
       "initiatesDownload": true
     },
     "45": {
@@ -354,6 +356,7 @@
       "type": "click",
       "selector": "button[aria-label='Export:Next']",
       "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "channel_partner",
       "initiatesDownload": true
     },
     "66": {
@@ -438,7 +441,7 @@
     },
     "82": {
       "type": "wait",
-      "duration": 10000,
+      "duration": 15000,
       "description": "Wait briefly after hitting Enter button"
     },
     "83": {
@@ -461,6 +464,7 @@
       "type": "click",
       "selector": "button[aria-label='Export:Next']",
       "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "OTC_INVOICE",
       "initiatesDownload": true
     },
     "88": {
