@@ -9,6 +9,7 @@ const forget = require("require-and-forget");
 const { parse, format } = require("date-fns");
 const configManager = require("./config-manager");
 const logger = require("./logger");
+const chromiumPath = puppeteer.executablePath();
 
 // Set Chrome executable path for Windows
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
@@ -159,6 +160,7 @@ async function waitUntilDownload(
   });
 }
 
+
 const initiateProcess = async (sheetId, actionSheet, configuration) => {
   let browser;
   let page;
@@ -167,11 +169,15 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
   let loginBlocked = false;
 
   try {
+    // browser = await launchBrowser();
     browser = await puppeteer.launch({
       headless: false,
+      executablePath: chromePath,
       defaultViewport: null,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
     });
+
+    console.log("Browser launched");
 
     page = await browser.newPage();
 
@@ -582,7 +588,8 @@ const initiateProcess = async (sheetId, actionSheet, configuration) => {
       }
     }
   } catch (err) {
-    logger.error("Error initializing Puppeteer:", err.message);
+    console.log("Error initializing Puppeteer:", err);
+    logger.error("Error initializing Puppeteer:", err);
   } finally {
     if (browser) {
       await browser.close();
