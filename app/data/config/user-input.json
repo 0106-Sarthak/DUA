@@ -1,9 +1,10 @@
 {
   "test-sheet": {
     "inputs": [
-      { "userId": "RC_1007200", "password": "Gvpl@1007200" },
-      { "userId": "LRAIKA1001330", "password": "Jhalawar@2025" },
-      { "userId": "BNARUKA_1003540", "password": "Sep@1234567" }
+      { "Dealer_name":"Dealer A", "Location":"Location B", "userId": "LRAIKA1001330", "password": "Jhalawar@2025" },
+      { "Dealer_name":"Dealer C", "Location":"Location C", "userId": "BNARUKA_1003540", "password": "Sep@1234567" },
+      { "Dealer_name":"Dealer A", "Location":"Location C", "userId": "LRAIKA1001330", "password": "Jhalawar@2025" },
+      { "Dealer_name":"Dealer C", "Location":"Location D", "userId": "BNARUKA_1003540", "password": "Sep@1234567" }
     ]
   }
 }

@@ -10,6 +10,30 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
+  "build": {
+    "appId": "com.yourcompany.duaapp",
+    "productName": "Dua App",
+    "copyright": "Copyright © 2025",
+    "icon": "assets/app.ico",
+    "files": [
+      "main/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
