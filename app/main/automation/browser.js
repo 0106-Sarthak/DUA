@@ -4,26 +4,35 @@ const { logger } = require("../logger");
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
 async function launchBrowser() {
-  const browser = await puppeteer.launch({
-    headless: false,
-    executablePath: chromePath,
-    defaultViewport: null,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
-  });
-  const page = await browser.newPage();
+    console.log("Launching browser...");
+    const browser = await puppeteer.launch({
+        headless: false,
+        executablePath: chromePath,
+        defaultViewport: null,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
+    });
+    console.log("Browser launched.");
 
-  // handle popups
-  page.on("dialog", async (dialog) => {
-    logger.info(`Dialog appeared: ${dialog.message()}`);
-    await dialog.dismiss();
-  });
+    const page = await browser.newPage();
+    console.log("New page created.");
 
-  await page.setCacheEnabled(false);
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0 Safari/537.36"
-  );
+    // handle popups
+    page.on("dialog", async (dialog) => {
+        logger.info(`Dialog appeared: ${dialog.message()}`);
+        console.log(`Dialog appeared: ${dialog.message()}`);
+        await dialog.dismiss();
+        console.log("Dialog dismissed.");
+    });
 
-  return { browser, page };
+    await page.setCacheEnabled(false);
+    console.log("Cache disabled.");
+
+    await page.setUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0 Safari/537.36"
+    );
+    console.log("User agent set.");
+
+    return { browser, page };
 }
 
 module.exports = { launchBrowser };
