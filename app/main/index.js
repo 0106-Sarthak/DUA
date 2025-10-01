@@ -7,6 +7,7 @@ const logger = require("./logger");
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+const { generateUserJson } = require("./generate-user"); 
 
 function streamLogFile() {
   const logDir = path.join("C:\\DuaReports", "logs");
@@ -46,6 +47,7 @@ app.whenReady().then(async () => {
 
   setupIPC();
   streamLogFile(); 
+  generateUserJson(); 
   // automation.start(config);
   const config = configManager.getConfig();
   const userInputs = configManager.getUserInputs();

@@ -48,7 +48,8 @@
     "puppeteer": "^24.19.0",
     "react": "^19.1.1",
     "require-and-forget": "^1.0.1",
-    "superagent": "^10.2.3"
+    "superagent": "^10.2.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@ljharb/tsconfig": "^0.3.2",
