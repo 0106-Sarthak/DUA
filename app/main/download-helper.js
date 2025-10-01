@@ -1,35 +1,15 @@
 const fs = require("fs");
 const path = require("path");
-const { logger } = require("./logger"); 
-
-// --- Helpers ---
-
-function sanitizeName(name = "") {
-  return name.toString().replace(/\s+/g, "_");
-}
-
-function buildDownloadPath(downloadPath, creds) {
-  const dealerSafe = sanitizeName(creds.Dealer_name || creds.dealerName);
-  const locationSafe = sanitizeName(creds.Location || creds.location);
-
-  let targetDir = downloadPath;
-  if (dealerSafe) targetDir = path.join(targetDir, dealerSafe);
-  if (locationSafe) targetDir = path.join(targetDir, locationSafe);
-
-  fs.mkdirSync(targetDir, { recursive: true });
-  return targetDir;
-}
-
-function moveDownloadedFile(sessionGuid, guids, downloadPath, targetDir) {
-  const sourcePath = path.resolve(downloadPath, sessionGuid);
-  const destPath = path.resolve(targetDir, guids[sessionGuid]);
-  fs.renameSync(sourcePath, destPath);
-  return destPath;
-}
+const logger = require("./logger");
 
 // --- Main function ---
 
-async function waitUntilDownload(session, downloadPath = "", fileName = "", creds = {}) {
+async function waitUntilDownload(
+  session,
+  downloadPath = "",
+  fileName = "",
+  creds = {}
+) {
   return new Promise((resolve, reject) => {
     const guids = {};
 
@@ -40,9 +20,30 @@ async function waitUntilDownload(session, downloadPath = "", fileName = "", cred
     session.on("Browser.downloadProgress", (e) => {
       if (e.state === "completed") {
         try {
-          const targetDir = buildDownloadPath(downloadPath, creds);
-          const destPath = moveDownloadedFile(e.guid, guids, downloadPath, targetDir);
+          // Extract dealer & location safely
+          const dealerRaw = creds.Dealer_name || creds.dealerName || "";
+          const locationRaw = creds.Location || creds.location || "";
+
+          const dealerSafe = dealerRaw.toString().replace(/\s+/g, "_");
+          const locationSafe = locationRaw.toString().replace(/\s+/g, "_");
+
+          // Build directory path
+          let targetDir = downloadPath;
+          if (dealerSafe) targetDir = path.join(targetDir, dealerSafe);
+          if (locationSafe) targetDir = path.join(targetDir, locationSafe);
+
+          fs.mkdirSync(targetDir, { recursive: true });
+
+          const sourcePath = path.resolve(downloadPath, e.guid);
+          const destPath = path.resolve(targetDir, guids[e.guid]);
+
+          logger.info("Dealer safe:", dealerSafe);
+          logger.info("Location safe:", locationSafe);
+          logger.info("Target directory:", targetDir);
+
+          fs.renameSync(sourcePath, destPath);
           logger.info("Download moved to:", destPath);
+
           resolve(destPath);
         } catch (err) {
           reject(err);
@@ -54,11 +55,9 @@ async function waitUntilDownload(session, downloadPath = "", fileName = "", cred
   });
 }
 
+
 // --- Exports ---
 
 module.exports = {
   waitUntilDownload,
-  buildDownloadPath,
-  moveDownloadedFile,
-  sanitizeName,
 };

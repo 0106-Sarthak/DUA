@@ -52,3 +52,191 @@ Execution
 App reads config.json.action_sheets → knows what scripts to run and when.
 
 Scheduler (cron or internal timer) executes them according to schedule.
+
+
+Decoupling plan 
+
+automation/
+│── browser.js        // handles launching/reusing browser & page
+│── login.js          // only login related logic
+│── actions.js        // generic action executor (click, type, wait, download…)
+│── workflow.js       // orchestration: login → actions → logout
+
+
+/////////////////////////////////////////////////////////////
+browser.js
+
+const puppeteer = require("puppeteer");
+const { logger } = require("../logger");
+const { chromePath } = require("../config");
+
+async function launchBrowser() {
+  const browser = await puppeteer.launch({
+    headless: false,
+    executablePath: chromePath,
+    defaultViewport: null,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
+  });
+  logger.info("Browser launched");
+  const page = await browser.newPage();
+
+  // Listen for dialogs
+  page.on("dialog", async (dialog) => {
+    logger.info(`Dialog appeared: ${dialog.message()}`);
+    await dialog.dismiss();
+  });
+
+  await page.setCacheEnabled(false);
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.5845.140 Safari/537.36"
+  );
+
+  return { browser, page };
+}
+
+module.exports = { launchBrowser };
+
+/////////////////////////////////////////////////////////////
+login.js
+const { logger } = require("../logger");
+const configManager = require("../configManager");
+
+async function doLogin(sheetId, page, loginAction) {
+  let loginFailed = false;
+
+  logger.info("Starting login action...");
+
+  for (const field of loginAction.fields || []) {
+    let value;
+    if (field.useUserInput) {
+      value = configManager.getUserInput(sheetId, field.inputToken);
+    } else {
+      value = field.value;
+    }
+    await page.type(field.selector, value);
+  }
+
+  if (loginAction.submit?.selector) {
+    try {
+      await page.waitForSelector(loginAction.submit.selector, { timeout: 60000 });
+      await page.click(loginAction.submit.selector);
+      logger.info("Clicked submit button.");
+    } catch (err) {
+      logger.error("Login submit failed:", err.message);
+    }
+  }
+
+  // Detect login failure
+  try {
+    loginFailed = await page.waitForFunction(() => {
+      const errEl = document.querySelector("#statusBar.siebui-error");
+      if (errEl) {
+        const text = errEl.innerText || "";
+        if (text.includes("incorrect") || text.includes("SBL-UIF-00272")) return true;
+      }
+      return false;
+    }, { timeout: 7000 });
+  } catch {
+    loginFailed = false; // assume success if no error
+  }
+
+  return loginFailed;
+}
+
+module.exports = { doLogin };
+
+
+/////////////////////////////////////////////////////////////
+actions.js
+
+const { logger } = require("../logger");
+const { sleep } = require("../utils");
+
+async function executeAction(sheetId, page, action) {
+  try {
+    switch (action.type) {
+      case "launch":
+        await page.goto(action.site, { waitUntil: "networkidle2", timeout: 60000 });
+        break;
+
+      case "wait":
+        await sleep(action.duration);
+        break;
+
+      case "click":
+        await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
+        await page.click(action.selector);
+        break;
+
+      case "type":
+        await page.waitForSelector(action.selector, { visible: true, timeout: 60000 });
+        await page.type(action.selector, action.value, { delay: 100 });
+        break;
+
+      case "logout":
+        for (const step of action.steps) {
+          await page.waitForSelector(step.selector, { visible: true, timeout: 60000 });
+          await page.click(step.selector);
+        }
+        break;
+
+      case "close":
+        logger.info("Close action encountered (browser close handled by workflow)");
+        break;
+
+      default:
+        logger.warn("Unknown action type:", action.type);
+    }
+  } catch (err) {
+    logger.error(`Error executing action ${action.type}:`, err.message);
+  }
+}
+
+async function runActions(sheetId, page, actions) {
+  for (const action of actions) {
+    await executeAction(sheetId, page, action);
+  }
+}
+
+module.exports = { runActions };
+
+
+/////////////////////////////////////////////////////////////
+workflow.js
+
+const { launchBrowser } = require("./browser");
+const { doLogin } = require("./login");
+const { runActions } = require("./actions");
+const { logger } = require("../logger");
+
+async function runWorkflow(sheetId, sheet, configuration) {
+  let { browser, page } = await launchBrowser();
+  let loginFailed = false;
+
+  try {
+    // Run login first
+    const loginAction = sheet.actions.find(a => a.type === "login");
+    if (loginAction) {
+      loginFailed = await doLogin(sheetId, page, loginAction);
+      if (loginFailed) {
+        logger.error("Login failed, stopping workflow");
+        return;
+      }
+    }
+
+    // Run all other actions
+    await runActions(sheetId, page, sheet.actions);
+
+  } catch (err) {
+    logger.error("Workflow error:", err.message);
+  } finally {
+    if (browser) {
+      await browser.close();
+      logger.info("Browser closed");
+    }
+  }
+}
+
+module.exports = { runWorkflow };
+
+

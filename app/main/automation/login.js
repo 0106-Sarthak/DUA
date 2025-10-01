@@ -1,96 +1,112 @@
+// automation/login.js
 const configManager = require("../config-manager");
 
-async function doLogin(sheetId, page, loginAction, loginBlocked = false) {
-    let loginFailed = false;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-    console.log("DEBUG: Starting login action...");
-    console.log("DEBUG: Fields to fill:", loginAction.fields);
-    console.log("DEBUG: Submit action:", loginAction.submit);
+async function doLogin(sheetId, page, loginAction) {
+  let loginFailed = false;
+  let dialogMessage = null;
 
-    if (!loginAction.fields || loginAction.fields.length === 0) {
-        console.log("DEBUG: No fields defined for login.");
-    }
+  console.log("DEBUG: Starting login action...");
+  if (!loginAction) {
+    console.log("DEBUG: No loginAction provided.");
+    return true; // treat as failure
+  }
 
-    // Fill fields
-    for (const field of loginAction.fields || []) {
-        let value = field.useUserInput
-            ? configManager.getUserInput(sheetId, field.inputToken)
-            : field.value;
-        console.log(`DEBUG: Filling field ${field.selector} with value:`, value);
-        try {
-            await page.type(field.selector, value);
-        } catch (err) {
-            console.log(
-                `DEBUG: Error typing into selector ${field.selector}:`,
-                err.message
-            );
-            loginFailed = true;
-        }
-    }
-
-    // Submit
-    if (loginAction.submit?.selector) {
-        console.log("DEBUG: Submit selector found:", loginAction.submit.selector);
-        try {
-            await page.waitForSelector(loginAction.submit.selector, {
-                timeout: 60000,
-            });
-            console.log("DEBUG: Submit selector is visible, clicking now...");
-            await page.click(loginAction.submit.selector);
-            console.log("DEBUG: Clicked submit button.");
-        } catch (err) {
-            console.log(
-                "DEBUG: Submit selector not found or not clickable:",
-                err.message
-            );
-        }
-    } else {
-        console.log("DEBUG: Submit action not defined or missing selector.");
-    }
-
-    console.log("DEBUG: Login action completed, waiting for navigation...");
-    if (loginAction.waitAfterSubmit) {
-        console.log(
-            `DEBUG: Waiting after submit for ${loginAction.waitAfterSubmit}ms...`
-        );
-        await page.waitForSelector("body", {
-            visible: true,
-            timeout: Math.max(loginAction.waitAfterSubmit, 1000),
-        });
-    }
-
-    console.log("DEBUG: Checking for login failure indicators...");
+  // capture dialog that may appear right after submit
+  const dialogHandler = async (dialog) => {
     try {
-        const handle = await page.waitForFunction(
-            () => {
-                const errEl = document.querySelector("#statusBar.siebui-error");
-                if (errEl) {
-                    const text = errEl.innerText || "";
-                    if (text.includes("incorrect") || text.includes("SBL-UIF-00272")) {
-                        return true;
-                    }
-                }
-                const successEl = document.querySelector("#some-dashboard-element");
-                if (successEl) return false;
-                return undefined;
-            },
-            { timeout: 7000 }
-        );
-
-        loginFailed = await handle.jsonValue();
-        console.log("DEBUG: loginFailed result from waitForFunction:", loginFailed);
+      dialogMessage = dialog.message();
+      console.log("DEBUG: Dialog appeared (captured):", dialogMessage);
+      await dialog.dismiss().catch((err) => {
+        console.log("DEBUG: dialog.dismiss() error (ignored):", err && err.message);
+      });
     } catch (err) {
-        loginFailed = false; // assume success if no error appeared
-        console.log("DEBUG: No error indicator found, assuming login success.");
+      console.log("DEBUG: dialogHandler error:", err && err.message);
     }
+  };
 
-    if (loginBlocked) {
-        loginFailed = true;
-        console.log("DEBUG: loginBlocked is true, setting loginFailed to true.");
+  page.once("dialog", dialogHandler);
+
+  // Fill fields
+  for (const field of loginAction.fields || []) {
+    const value = field.useUserInput
+      ? configManager.getUserInput(sheetId, field.inputToken)
+      : field.value;
+    console.log(`DEBUG: Typing into ${field.selector} = ${value}`);
+    try {
+      await page.type(field.selector, value);
+    } catch (err) {
+      console.log(`DEBUG: Error typing into ${field.selector}:`, err && err.message);
+      loginFailed = true;
     }
+  }
 
-    console.log("DEBUG: Login failed status:", loginFailed);
-    return loginFailed;
+  // Click submit
+  if (loginAction.submit?.selector) {
+    try {
+      await page.waitForSelector(loginAction.submit.selector, { timeout: 60000 });
+      console.log("DEBUG: Clicking submit...");
+      await page.click(loginAction.submit.selector);
+      console.log("DEBUG: Clicked submit.");
+    } catch (err) {
+      console.log("DEBUG: Could not click submit:", err && err.message);
+      loginFailed = true;
+    }
+  } else {
+    console.log("DEBUG: No submit selector provided.");
+  }
+
+  // Stabilize wait
+  const stabilizeMs = loginAction.waitAfterSubmit || 5000;
+  console.log(`DEBUG: Waiting ${stabilizeMs}ms to stabilize and capture any dialog...`);
+  await sleep(stabilizeMs);
+
+  // Check if dialog was captured
+  if (dialogMessage) {
+    console.log("DEBUG: Dialog captured during stabilization:", dialogMessage);
+    if (dialogMessage.includes("Max Concurrent Sessions")) {
+      console.log("DEBUG: Max concurrent sessions appeared -> login blocked.");
+      loginFailed = true;
+    } else {
+      console.log("DEBUG: Dialog appeared -> treating as login failed.");
+      loginFailed = true;
+    }
+  } else {
+    console.log("DEBUG: No dialog captured during stabilization.");
+  }
+
+  // If not failed, check inline error indicators
+  if (!loginFailed) {
+    console.log("DEBUG: Checking inline error indicators...");
+    try {
+      const handle = await page.waitForFunction(
+        () => {
+          const errEl = document.querySelector("#statusBar.siebui-error");
+          if (errEl) {
+            const txt = errEl.innerText || "";
+            if (/incorrect|SBL-UIF-00272/i.test(txt)) return true;
+          }
+          const successEl = document.querySelector("#some-dashboard-element");
+          if (successEl) return false;
+          return undefined;
+        },
+        { timeout: 7000 }
+      );
+
+      const result = await handle.jsonValue();
+      console.log("DEBUG: Inline login check result:", result);
+      loginFailed = !!result;
+    } catch (err) {
+      console.log("DEBUG: No inline error detected (wait timed out). Assuming success.");
+      loginFailed = false;
+    }
+  }
+
+  console.log("DEBUG: Final loginFailed =", loginFailed);
+  return loginFailed; // true => failed, false => success
 }
 
 module.exports = { doLogin };

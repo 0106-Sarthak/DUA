@@ -1,5 +1,5 @@
 const puppeteer = require("puppeteer");
-const { logger } = require("../logger");
+const logger = require("../logger");
 
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
@@ -15,14 +15,6 @@ async function launchBrowser() {
 
     const page = await browser.newPage();
     console.log("New page created.");
-
-    // handle popups
-    page.on("dialog", async (dialog) => {
-        logger.info(`Dialog appeared: ${dialog.message()}`);
-        console.log(`Dialog appeared: ${dialog.message()}`);
-        await dialog.dismiss();
-        console.log("Dialog dismissed.");
-    });
 
     await page.setCacheEnabled(false);
     console.log("Cache disabled.");
