@@ -9,7 +9,7 @@ const forget = require("require-and-forget");
 const { parse, format } = require("date-fns");
 const configManager = require("./config-manager");
 const logger = require("./logger");
-const chromiumPath = puppeteer.executablePath();
+const { runWorkflow } = require("./automation/workflow");
 
 // Set Chrome executable path for Windows
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
@@ -704,11 +704,12 @@ async function main() {
         configManager.setCurrentRunInputs(sheet.id, creds);
 
         try {
-          const loginSucceeded = await initiateProcess(
-            sheet.id,
-            actionSheet,
-            configuration
-          );
+          // const loginSucceeded = await initiateProcess(
+          //   sheet.id,
+          //   actionSheet,
+          //   configuration
+          // );
+          const loginSucceeded = await runWorkflow(sheet.id, actionSheet, configuration);
           if (!loginSucceeded) {
             logger.info(
               `Login failed for user ${creds.userId}, skipping remaining actions.`
