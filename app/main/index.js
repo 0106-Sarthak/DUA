@@ -1,10 +1,31 @@
 const { app, BrowserWindow } = require("electron");
-const path = require("path");
+// const path = require("path");
 const setupIPC = require("./ipc");
 const automation = require("./automation");
 const configManager = require("./config-manager");
 const logger = require("./logger");
+const { exec } = require("child_process");
+const path = require("path");
+const fs = require("fs");
+const { generateUserJson } = require("./generate-user"); 
 
+function streamLogFile() {
+  const logDir = path.join("C:\\DuaReports", "logs");
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+
+  const logFile = path.join(logDir, `${new Date().toISOString().slice(0, 10)}.log`);
+
+  // Ensure file exists
+  if (!fs.existsSync(logFile)) fs.writeFileSync(logFile, "");
+
+  // Build command to open a new terminal window and tail the log
+  // Using PowerShell in a new CMD window
+  const cmd = `start powershell -NoExit -Command "Get-Content -Path '${logFile}' -Wait"`;
+
+  exec(cmd, (error) => {
+    if (error) console.error("Failed to open log window:", error);
+  });
+}
 // const configFilePath = "C:\\dua-data\\config\\config.json";
 
 function createWindow() {
@@ -25,6 +46,8 @@ app.whenReady().then(async () => {
   createWindow();
 
   setupIPC();
+  streamLogFile(); 
+  generateUserJson(); 
   // automation.start(config);
   const config = configManager.getConfig();
   const userInputs = configManager.getUserInputs();
