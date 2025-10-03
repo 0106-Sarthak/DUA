@@ -48,410 +48,419 @@
       "duration": 5000
     },
     "5": {
-      "type": "click",
-      "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
-      "description": "Click Site Map button"
+      "type": "type",
+      "selector": "#sitemapFilterInput",
+      "value": "MIS - Spares",
+      "description": "Type the link name into the search box"
     },
     "6": {
       "type": "wait",
-      "duration": 2000
+      "duration": 2000,
+      "description": "Wait for search results to appear"
     },
     "7": {
-      "type": "click",
-      "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
-      "description": "Click Site Map button"
-    },
-    "8": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "9": {
-      "type": "type",
-      "selector": "#sitemapFilterInput",
-      "value": "Spares Purchase Line Items - Editable",
-      "description": "Type the link name into the search box"
-    },
-    "10": {
-      "type": "wait",
-      "duration": 5000
-    },
-    "11": {
       "type": "click",
       "selector": "//a[contains(text(), '{{searchText}}')]",
       "isXPath": true,
       "description": "Click on the result in the dropdown list",
-      "searchText": "Spares Purchase Line Items - Editable"
+      "searchText": "MIS - Spares"
     },
-    "12": {
+    "8": {
       "type": "wait",
-      "duration": 2000
+      "duration": 10000
     },
-    "13": {
+    "9": {
       "type": "click",
-      "selector": "#s_1_1_9_0_Ctrl",
+      "selector": "#s_1_1_16_0_Ctrl",
       "description": "Click search icon button"
     },
-    "14": {
+    "10": {
       "type": "wait",
       "duration": 2000,
       "description": "Wait briefly after clicking Query button"
     },
-    "15": {
+    "11": {
       "type": "click",
-      "selector": "#\\31_s_1_l_Availability_Code",
-      "description": "Click the Availability cell to open input"
+      "selector": "#\\31 _s_1_l_Quantity",
+      "description": "Click the Quantity cell to open input"
+    },
+    "12": {
+      "type": "type",
+      "selector": "#\\31 _Quantity",
+      "value": ">0",
+      "description": "Enter quantity condition in the input field"
+    },
+    "13": {
+      "type": "click",
+      "selector": "#\\31 _s_1_l_Availability",
+      "description": "Click the search icon button to apply filter"
+    },
+    "14": {
+      "type": "type",
+      "selector": "#\\31 _Availability",
+      "value": "\"On Hand\"",
+      "description": "Enter availability condition in the input field"
+    },
+    "15": {
+      "type": "keyboard",
+      "key": "Enter",
+      "description": "Press Enter after typing in the quantity field"
     },
     "16": {
       "type": "wait",
-      "duration": 2000
+      "duration": 5000,
+      "description": "Wait briefly after hitting Enter button"
     },
     "17": {
-      "type": "type",
-      "selector": "#\\31_Availability_Code",
-      "value": "\"In Transit\"",
-      "description": "Enter availability condition in the input field"
+      "type": "click",
+      "selector": "#s_1_1_21_0_Ctrl",
+      "description": "Click the download Excel button"
     },
     "18": {
       "type": "wait",
-      "duration": 2000
+      "duration": 5000,
+      "description": "Wait for Export popup to appear"
     },
     "19": {
       "type": "click",
-      "selector": "#\\31_s_1_l_TM_Invoice_Date",
-      "description": "Click the search icon button to apply filter"
+      "selector": "button[aria-label='Export:Next']",
+      "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "Stock_Report",
+      "initiatesDownload": true
     },
     "20": {
       "type": "wait",
-      "duration": 2000
+      "duration": 5000,
+      "description": "Wait for export to process"
     },
     "21": {
-      "type": "type",
-      "selector": "#\\31_TM_Invoice_Date",
-      "value": "dynamic-date",
-      "month": 3,
-      "description": "Enter Invoice Date condition in the input field"
+      "type": "click",
+      "selector": "button[aria-label='Export:Close']",
+      "description": "Click on 'close' button in the Export popup"
     },
     "22": {
       "type": "wait",
       "duration": 2000
     },
     "23": {
-      "type": "keyboard",
-      "key": "Enter",
-      "description": "Press Enter after typing in the quantity field"
-    },
-    "24": {
-      "type": "wait",
-      "duration": 5000,
-      "description": "Wait briefly after hitting Enter button"
-    },
-    "25": {
-      "type": "click",
-      "selector": "#s_at_m_1",
-      "description": "Click the settings button"
-    },
-    "26": {
-      "type": "wait",
-      "duration": 5000,
-      "description": "Wait for Export popup to appear"
-    },
-    "27": {
-      "type": "click",
-      "selector": "//a[contains(text(), '{{searchText}}')]",
-      "isXPath": true,
-      "description": "Click on the result in the dropdown list",
-      "searchText": "Export..."
-    },
-    "28": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "29": {
-      "type": "click",
-      "selector": "button[aria-label='Export:Next']",
-      "description": "Click on 'Next' button in the Export popup",
-      "initiatesDownload": true
-    },
-    "30": {
-      "type": "wait",
-      "duration": 5000,
-      "description": "Wait for export to process"
-    },
-    "31": {
-      "type": "click",
-      "selector": "button[aria-label='Export:Close']",
-      "description": "Click on 'close' button in the Export popup"
-    },
-    "32": {
-      "type": "wait",
-      "duration": 2000
-    },
-
-    "33": {
-      "type": "click",
-      "selector": "#s_1_1_9_0_Ctrl",
-      "description": "Click search icon button"
-    },
-    "34": {
-      "type": "click",
-      "selector": "#\\31_s_1_l_TM_Order_Date",
-      "description": "Click the Order Date cell to open input"
-    },
-    "35": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "36": {
-      "type": "type",
-      "selector": "#\\31_TM_Order_Date",
-      "value": "dynamic-date",
-      "month": 1,
-      "description": "Enter Order Date condition in the input field"
-    },
-    "37": {
-      "type": "wait",
-      "duration": 5000
-    },
-    "38": {
-      "type": "keyboard",
-      "key": "Enter",
-      "description": "Press Enter after typing in the quantity field"
-    },
-    "39": {
-      "type": "wait",
-      "duration": 5000,
-      "description": "Wait briefly after hitting Enter button"
-    },
-    "40": {
-      "type": "click",
-      "selector": "#s_at_m_1",
-      "description": "Click the settings button"
-    },
-    "41": {
-      "type": "wait",
-      "duration": 5000,
-      "description": "Wait for Export popup to appear"
-    },
-    "42": {
-      "type": "click",
-      "selector": "//a[contains(text(), '{{searchText}}')]",
-      "isXPath": true,
-      "description": "Click on the result in the dropdown list",
-      "searchText": "Export..."
-    },
-    "43": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "44": {
-      "type": "click",
-      "selector": "button[aria-label='Export:Next']",
-      "description": "Click on 'Next' button in the Export popup",
-      "initiatesDownload": true
-    },
-    "45": {
-      "type": "wait",
-      "duration": 5000,
-      "description": "Wait for export to process"
-    },
-    "46": {
-      "type": "click",
-      "selector": "button[aria-label='Export:Close']",
-      "description": "Click on 'close' button in the Export popup"
-    },
-    "47": {
-      "type": "wait",
-      "duration": 2000
-    },
-
-    "48": {
       "type": "click",
       "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
       "description": "Click Site Map button"
     },
-    "49": {
+    "24": {
       "type": "wait",
       "duration": 2000
     },
-    "50": {
+    "25": {
+      "type": "click",
+      "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
+      "description": "Click Site Map button"
+    },
+    "26": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "27": {
       "type": "type",
       "selector": "#sitemapFilterInput",
-      "value": "Channel Partner Purchase",
+      "value": "Spares Purchase Line Items - Editable",
       "description": "Type the link name into the search box"
     },
-    "51": {
+    "28": {
       "type": "wait",
       "duration": 5000
     },
-    "52": {
+    "29": {
       "type": "click",
       "selector": "//a[contains(text(), '{{searchText}}')]",
       "isXPath": true,
       "description": "Click on the result in the dropdown list",
-      "searchText": "Channel Partner Purchase"
+      "searchText": "Spares Purchase Line Items - Editable"
+    },
+    "30": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "31": {
+      "type": "click",
+      "selector": "#s_1_1_9_0_Ctrl",
+      "description": "Click search icon button"
+    },
+    "32": {
+      "type": "wait",
+      "duration": 2000,
+      "description": "Wait briefly after clicking Query button"
+    },
+    "33": {
+      "type": "click",
+      "selector": "#\\31_s_1_l_Availability_Code",
+      "description": "Click the Availability cell to open input"
+    },
+    "34": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "35": {
+      "type": "type",
+      "selector": "#\\31_Availability_Code",
+      "value": "\"In Transit\"",
+      "description": "Enter availability condition in the input field"
+    },
+    "36": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "37": {
+      "type": "click",
+      "selector": "#\\31_s_1_l_TM_Invoice_Date",
+      "description": "Click the search icon button to apply filter"
+    },
+    "38": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "39": {
+      "type": "type",
+      "selector": "#\\31_TM_Invoice_Date",
+      "value": "dynamic-date",
+      "month": 3,
+      "description": "Enter Invoice Date condition in the input field"
+    },
+    "40": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "41": {
+      "type": "keyboard",
+      "key": "Enter",
+      "description": "Press Enter after typing in the quantity field"
+    },
+    "42": {
+      "type": "wait",
+      "duration": 5000,
+      "description": "Wait briefly after hitting Enter button"
+    },
+    "43": {
+      "type": "click",
+      "selector": "#s_at_m_1",
+      "description": "Click the settings button"
+    },
+    "44": {
+      "type": "wait",
+      "duration": 5000,
+      "description": "Wait for Export popup to appear"
+    },
+    "45": {
+      "type": "click",
+      "selector": "//a[contains(text(), '{{searchText}}')]",
+      "isXPath": true,
+      "description": "Click on the result in the dropdown list",
+      "searchText": "Export..."
+    },
+    "46": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "47": {
+      "type": "click",
+      "selector": "button[aria-label='Export:Next']",
+      "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "Purchase_Line_Items",
+      "initiatesDownload": true
+    },
+    "48": {
+      "type": "wait",
+      "duration": 5000,
+      "description": "Wait for export to process"
+    },
+    "49": {
+      "type": "click",
+      "selector": "button[aria-label='Export:Close']",
+      "description": "Click on 'close' button in the Export popup"
+    },
+    "50": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "51": {
+      "type": "click",
+      "selector": "#s_1_1_9_0_Ctrl",
+      "description": "Click search icon button"
+    },
+    "52": {
+      "type": "click",
+      "selector": "#\\31_s_1_l_TM_Order_Date",
+      "description": "Click the Order Date cell to open input"
     },
     "53": {
       "type": "wait",
       "duration": 2000
     },
     "54": {
+      "type": "type",
+      "selector": "#\\31_TM_Order_Date",
+      "value": "dynamic-date",
+      "month": 1,
+      "description": "Enter Order Date condition in the input field"
+    },
+    "55": {
+      "type": "wait",
+      "duration": 5000
+    },
+    "56": {
+      "type": "keyboard",
+      "key": "Enter",
+      "description": "Press Enter after typing in the quantity field"
+    },
+    "57": {
+      "type": "wait",
+      "duration": 5000,
+      "description": "Wait briefly after hitting Enter button"
+    },
+    "58": {
+      "type": "click",
+      "selector": "#s_at_m_1",
+      "description": "Click the settings button"
+    },
+    "59": {
+      "type": "wait",
+      "duration": 5000,
+      "description": "Wait for Export popup to appear"
+    },
+    "60": {
+      "type": "click",
+      "selector": "//a[contains(text(), '{{searchText}}')]",
+      "isXPath": true,
+      "description": "Click on the result in the dropdown list",
+      "searchText": "Export..."
+    },
+    "61": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "62": {
+      "type": "click",
+      "selector": "button[aria-label='Export:Next']",
+      "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "Purchase_Line_PO",
+      "initiatesDownload": true
+    },
+    "63": {
+      "type": "wait",
+      "duration": 5000,
+      "description": "Wait for export to process"
+    },
+    "64": {
+      "type": "click",
+      "selector": "button[aria-label='Export:Close']",
+      "description": "Click on 'close' button in the Export popup"
+    },
+    "65": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "66": {
+      "type": "click",
+      "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
+      "description": "Click Site Map button"
+    },
+    "67": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "68": {
+      "type": "type",
+      "selector": "#sitemapFilterInput",
+      "value": "Channel Partner Purchase",
+      "description": "Type the link name into the search box"
+    },
+    "69": {
+      "type": "wait",
+      "duration": 5000
+    },
+    "70": {
+      "type": "click",
+      "selector": "//a[contains(text(), '{{searchText}}')]",
+      "isXPath": true,
+      "description": "Click on the result in the dropdown list",
+      "searchText": "Channel Partner Purchase"
+    },
+    "71": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "72": {
       "type": "click",
       "selector": "button[data-display='Query']",
       "description": "Click search icon button"
     },
-    "55": {
+    "73": {
       "type": "wait",
       "duration": 2000,
       "description": "Wait briefly after clicking Query button"
     },
-    "56": {
+    "74": {
       "type": "click",
       "selector": "#\\31_s_1_l_Order_Date",
       "description": "Click the Order Date cell to open input"
     },
-    "57": {
+    "75": {
       "type": "wait",
       "duration": 2000
     },
-    "58": {
+    "76": {
       "type": "type",
       "selector": "#\\31_Order_Date",
       "value": "dynamic-date",
       "month": 3,
       "description": "Enter Order Date condition in the input field"
     },
-    "59": {
+    "77": {
       "type": "wait",
       "duration": 2000
     },
-    "60": {
+    "78": {
       "type": "keyboard",
       "key": "Enter",
       "description": "Press Enter after typing in the quantity field"
     },
-    "61": {
+    "79": {
       "type": "wait",
       "duration": 5000,
       "description": "Wait briefly after hitting Enter button"
     },
-    "62": {
+    "80": {
       "type": "click",
       "selector": "button[title='Channel Partner Purchase Menu']",
       "description": "Click the settings button"
     },
-    "63": {
+    "81": {
       "type": "click",
       "selector": "//a[contains(text(), '{{searchText}}')]",
       "isXPath": true,
       "description": "Click on the result in the dropdown list",
       "searchText": "Export..."
     },
-    "64": {
+    "82": {
       "type": "wait",
       "duration": 2000
     },
-    "65": {
+    "83": {
       "type": "click",
       "selector": "button[aria-label='Export:Next']",
       "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "channel_partner",
       "initiatesDownload": true
     },
-    "66": {
+    "84": {
       "type": "wait",
       "duration": 5000,
       "description": "Wait for export to process"
     },
-    "67": {
+    "85": {
       "type": "click",
       "selector": "button[aria-label='Export:Close']",
       "description": "Click on 'close' button in the Export popup"
-    },
-    "68": {
-      "type": "wait",
-      "duration": 2000
-    },
-
-    "69": {
-      "type": "click",
-      "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
-      "description": "Click Site Map button"
-    },
-    "70": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "71": {
-      "type": "type",
-      "selector": "#sitemapFilterInput",
-      "value": "OTC Sales Invoices",
-      "description": "Type the link name into the search box"
-    },
-    "72": {
-      "type": "wait",
-      "duration": 5000
-    },
-    "73": {
-      "type": "click",
-      "selector": "//a[contains(text(), '{{searchText}}')]",
-      "isXPath": true,
-      "description": "Click on the result in the dropdown list",
-      "searchText": "OTC Sales Invoices"
-    },
-    "74": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "75": {
-      "type": "click",
-      "selector": "button[data-display='Query']",
-      "description": "Click search icon button"
-    },
-    "76": {
-      "type": "wait",
-      "duration": 2000,
-      "description": "Wait briefly after clicking Query button"
-    },
-    "77": {
-      "type": "click",
-      "selector": "#\\31_s_3_l_Invoice_Date",
-      "description": "Click the Invoice Date cell to open input"
-    },
-    "78": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "79": {
-      "type": "type",
-      "selector": "#\\31_Invoice_Date",
-      "value": "dynamic-date",
-      "month": 3,
-      "description": "Enter Invoice Date condition in the input field"
-    },
-    "80": {
-      "type": "wait",
-      "duration": 2000
-    },
-    "81": {
-      "type": "keyboard",
-      "key": "Enter",
-      "description": "Press Enter after typing in the quantity field"
-    },
-    "82": {
-      "type": "wait",
-      "duration": 10000,
-      "description": "Wait briefly after hitting Enter button"
-    },
-    "83": {
-      "type": "click",
-      "selector": "button[title='OTC Sales Invoices Menu']",
-      "description": "Click the settings button"
-    },
-    "85": {
-      "type": "click",
-      "selector": "//a[contains(text(), '{{searchText}}')]",
-      "isXPath": true,
-      "description": "Click on the result in the dropdown list",
-      "searchText": "Export..."
     },
     "86": {
       "type": "wait",
@@ -459,25 +468,112 @@
     },
     "87": {
       "type": "click",
-      "selector": "button[aria-label='Export:Next']",
-      "description": "Click on 'Next' button in the Export popup",
-      "initiatesDownload": true
+      "selector": "span.siebui-icon-tb-sitemap.ToolbarButtonOn",
+      "description": "Click Site Map button"
     },
     "88": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "89": {
+      "type": "type",
+      "selector": "#sitemapFilterInput",
+      "value": "OTC Sales Invoices",
+      "description": "Type the link name into the search box"
+    },
+    "90": {
+      "type": "wait",
+      "duration": 5000
+    },
+    "91": {
+      "type": "click",
+      "selector": "//a[contains(text(), '{{searchText}}')]",
+      "isXPath": true,
+      "description": "Click on the result in the dropdown list",
+      "searchText": "OTC Sales Invoices"
+    },
+    "92": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "93": {
+      "type": "click",
+      "selector": "button[data-display='Query']",
+      "description": "Click search icon button"
+    },
+    "94": {
+      "type": "wait",
+      "duration": 2000,
+      "description": "Wait briefly after clicking Query button"
+    },
+    "95": {
+      "type": "click",
+      "selector": "#\\31_s_3_l_Invoice_Date",
+      "description": "Click the Invoice Date cell to open input"
+    },
+    "96": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "97": {
+      "type": "type",
+      "selector": "#\\31_Invoice_Date",
+      "value": "dynamic-date",
+      "month": 3,
+      "description": "Enter Invoice Date condition in the input field"
+    },
+    "98": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "99": {
+      "type": "keyboard",
+      "key": "Enter",
+      "description": "Press Enter after typing in the quantity field"
+    },
+    "100": {
+      "type": "wait",
+      "duration": 15000,
+      "description": "Wait briefly after hitting Enter button"
+    },
+    "101": {
+      "type": "click",
+      "selector": "button[title='OTC Sales Invoices Menu']",
+      "description": "Click the settings button"
+    },
+    "102": {
+      "type": "click",
+      "selector": "//a[contains(text(), '{{searchText}}')]",
+      "isXPath": true,
+      "description": "Click on the result in the dropdown list",
+      "searchText": "Export..."
+    },
+    "103": {
+      "type": "wait",
+      "duration": 2000
+    },
+    "104": {
+      "type": "click",
+      "selector": "button[aria-label='Export:Next']",
+      "description": "Click on 'Next' button in the Export popup",
+      "filePrefix": "OTC_INVOICE",
+      "initiatesDownload": true
+    },
+    "105": {
       "type": "wait",
       "duration": 5000,
       "description": "Wait for export to process"
     },
-    "89": {
+    "106": {
       "type": "click",
       "selector": "button[aria-label='Export:Close']",
       "description": "Click on 'close' button in the Export popup"
     },
-    "90": {
+    "107": {
       "type": "wait",
       "duration": 2000
     },
-    "91": {
+    "108": {
       "type": "logout",
       "steps": [
         {
@@ -490,11 +586,11 @@
         }
       ]
     },
-    "92": {
+    "109": {
       "type": "wait",
       "duration": 2000
     },
-    "93": {
+    "110": {
       "type": "close"
     }
   }
