@@ -1,6 +1,6 @@
 const { launchBrowser } = require("./browser");
 const { doLogin } = require("./login");
-const { runActions } = require("./actions"); // runAction for individual actions
+const { runActions } = require("./actions");
 
 async function runWorkflow(sheetId, sheet, configuration) {
     console.log("=== Starting workflow for sheetId:", sheetId, "===");

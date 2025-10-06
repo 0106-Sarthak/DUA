@@ -233,14 +233,9 @@ async function main() {
   busy = false;
 }
 
-// function start() {
-//   logger.info("Automation started...");
-//   setInterval(main, 2000);
-// }
-
 async function start() {
   console.log("Automation started...");
-  await main(); // run once
+  await main();
   console.log("Automation finished. Exiting...");
   process.exit(0); 
 }

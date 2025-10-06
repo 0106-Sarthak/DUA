@@ -60,7 +60,7 @@ async function doLogin(sheetId, page, loginAction) {
   }
 
   // Stabilize wait
-  const stabilizeMs = loginAction.waitAfterSubmit || 5000;
+  const stabilizeMs = loginAction.waitAfterSubmit || 20000;
   console.log(`DEBUG: Waiting ${stabilizeMs}ms to stabilize and capture any dialog...`);
   await sleep(stabilizeMs);
 
