@@ -1,28 +1,17 @@
-const { launchBrowser } = require("./browser");
+
 const { doLogin } = require("./login");
 const { runActions } = require("./actions");
 
-async function runWorkflow(sheetId, sheet, configuration) {
+async function runWorkflow(sheetId, sheet, configuration, page) {
     console.log("=== Starting workflow for sheetId:", sheetId, "===");
 
-    let browser, page;
-
     try {
+        if (!page) throw new Error("Page not provided to workflow");
+
         if (!sheet?.actions || !Array.isArray(sheet.actions)) {
             console.error("sheet.actions is missing or not an array");
             return false;
         }
-
-        console.log("Launching browser...");
-        const launchResult = await launchBrowser();
-        browser = launchResult?.browser;
-        page = launchResult?.page;
-
-        if (!browser || !page) {
-            throw new Error("Browser or page not created");
-        }
-
-        console.log("Browser launched successfully");
 
         // Iterate over all actions and execute via switch
         for (const action of sheet.actions) {
