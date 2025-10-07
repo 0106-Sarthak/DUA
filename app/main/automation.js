@@ -119,138 +119,7 @@ const deepMerge = (local, remote) => {
   return merged;
 };
 
-// async function main() {
-//   if (busy) {
-//     console.log("Main loop is busy, skipping this run.");
-//     return;
-//   }
-//   busy = true;
-
-//   try {
-//     console.log("Checking configuration...");
-
-//     if (!fs.existsSync(configFilePath)) {
-//       console.log("Configuration file not found at", configFilePath);
-//       busy = false;
-//       return;
-//     }
-
-//     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-//     console.log("Loaded configuration:", configuration);
-
-//     // Refresh user inputs
-//     await refreshUserInput();
-
-//     console.log("Launching shared browser for all sheets...");
-//     const { browser, page } = await launchBrowser();
-
-//     // Iterate action sheets
-//     for (const sheet of configuration.action_sheets || []) {
-//       const sheetPath = path.join(actionSheetsDir, sheet.name + ".json");
-//       console.log("Checking action sheet:", sheet.name);
-
-//       if (!fs.existsSync(sheetPath)) {
-//         console.log(`Action sheet file not found at ${sheetPath}`);
-//         continue;
-//       }
-
-//       const actionSheet = forget(sheetPath);
-
-//       console.log("Sheet object:", sheet);
-
-//       // Check if this sheet is scheduled to run now
-//       let shouldRun = false;
-//       const now = new Date();
-
-//       for (const cronExpr of Object.values(sheet.config?.runtimes || {})) {
-//         try {
-//           const interval = CronExpressionParser.parse(cronExpr, {
-//             currentDate: new Date(now.getTime() - 1000),
-//           });
-//           const next = interval.next().toDate();
-
-//           console.log(
-//             `Cron schedule for ${
-//               sheet.name
-//             }: next run at ${next.toISOString()}, now is ${now.toISOString()}`
-//           );
-
-//           if (
-//             Math.abs(next.getTime() - now.getTime()) < 60000 &&
-//             (!alreadyRan[sheet.id] ||
-//               alreadyRan[sheet.id].getTime() !== next.getTime())
-//           ) {
-//             console.log(`Action sheet ${sheet.name} is scheduled to run now.`);
-//             shouldRun = true;
-//             alreadyRan[sheet.id] = next;
-//             break;
-//           }
-//         } catch (err) {
-//           console.error(`Cron error in ${sheet.name}:`, err.message);
-//         }
-//       }
-
-//       if (!shouldRun) {
-//         console.log(`Skipping action sheet ${sheet.name}.`);
-//         continue;
-//       }
-
-//       // Run the sheet for each user
-//       const credsArray = userInputStore[sheet.id]?.inputs || [];
-//       if (credsArray.length === 0) {
-//         console.log(`No user inputs found for sheet ${sheet.name}, skipping.`);
-//         continue;
-//       }
-
-//       for (const creds of credsArray) {
-//         console.log(`Running sheet ${sheet.name} for user ${creds.userId}`);
-//         // Set current run inputs so actions can access them
-//         configManager.setCurrentRunInputs(sheet.id, creds);
-
-//         try {
-//           // const loginSucceeded = await initiateProcess(
-//           //   sheet.id,
-//           //   actionSheet,
-//           //   configuration
-//           // );
-//           const loginSucceeded = await runWorkflow(
-//             sheet.id,
-//             actionSheet,
-//             configuration,
-//             page
-//           );
-//           console.log(
-//             `runWorkflow result for user ${creds.userId}:`,
-//             loginSucceeded
-//           );
-//           if (!loginSucceeded) {
-//             console.log(
-//               `Login failed for user ${creds.userId}, skipping remaining actions.`
-//             );
-//             continue; // skip this user
-//           }
-//           console.log(
-//             `Finished running sheet ${sheet.name} for user ${creds.userId}`
-//           );
-//         } catch (err) {
-//           console.error(
-//             `Error running sheet ${sheet.name} for user ${creds.userId}:`,
-//             err.message
-//           );
-//         }
-//       }
-//     }
-//   } finally {
-//     if (browser) {
-//       console.log("Closing shared browser after all sheets done...");
-//       await browser.close();
-//     }
-//   }
-
-//   busy = false;
-// }
-
-async function main() {
+async function main(options) {
   if (busy) {
     console.log("Main loop is busy, skipping this run.");
     return;
@@ -330,7 +199,7 @@ async function main() {
         }
 
         console.log(`➡️ Running sheet ${sheet.name} for ${userKey}`);
-        configManager.setCurrentRunInputs(sheet.id, creds);
+        configManager.setCurrentRunInputs(sheet.id, options.inputs);
 
         try {
           const success = await runWorkflow(
@@ -372,9 +241,9 @@ async function main() {
 }
 
 
-async function start() {
+async function start(options) {
   console.log("Automation started...");
-  await main();
+  await main(options);
   console.log("Automation finished. Exiting...");
   process.exit(0);
 }
