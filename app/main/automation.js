@@ -7,7 +7,6 @@ const forget = require("require-and-forget");
 const configManager = require("./config-manager");
 // const logger = require("./logger");
 const { runWorkflow } = require("./automation/workflow");
-
 const { launchBrowser } = require("./automation/browser");
 
 // Set Chrome executable path for Windows
@@ -257,7 +256,7 @@ async function main() {
   }
   busy = true;
 
-  let browser; // declare outside try so we can close it finally
+  let browser;
 
   try {
     console.log("Checking configuration...");
@@ -370,7 +369,6 @@ async function main() {
     busy = false;
   }
 }
-
 
 async function start() {
   console.log("Automation started...");
