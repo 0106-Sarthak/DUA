@@ -1,5 +1,4 @@
 const { app, BrowserWindow } = require("electron");
-// const path = require("path");
 const setupIPC = require("./ipc");
 const automation = require("./automation");
 const configManager = require("./config-manager");
@@ -7,26 +6,20 @@ const logger = require("./logger");
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
-const { generateUserJson } = require("./generate-user"); 
+const { generateUserJson } = require("./generate-user");
 
 function streamLogFile() {
   const logDir = path.join("C:\\DuaReports", "logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 
   const logFile = path.join(logDir, `${new Date().toISOString().slice(0, 10)}.log`);
-
-  // Ensure file exists
   if (!fs.existsSync(logFile)) fs.writeFileSync(logFile, "");
 
-  // Build command to open a new terminal window and tail the log
-  // Using PowerShell in a new CMD window
   const cmd = `start powershell -NoExit -Command "Get-Content -Path '${logFile}' -Wait"`;
-
   exec(cmd, (error) => {
     if (error) console.error("Failed to open log window:", error);
   });
 }
-// const configFilePath = "C:\\dua-data\\config\\config.json";
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -38,39 +31,63 @@ function createWindow() {
       contextIsolation: true,
     },
   });
-
   win.loadFile(path.join(__dirname, "../renderer/index.html"));
 }
 
 app.whenReady().then(async () => {
   createWindow();
-
   setupIPC();
-  streamLogFile(); 
-  generateUserJson(); 
-  // automation.start(config);
+  streamLogFile();
+  generateUserJson();
+
   const config = configManager.getConfig();
   const userInputs = configManager.getUserInputs();
 
   async function runAllSheets() {
-    for (const sheet of config.action_sheets) {
+    for (const sheet of config.action_sheets || []) {
       const sheetId = sheet.id;
       const credsArray = userInputs[sheetId]?.inputs || [];
 
       for (const creds of credsArray) {
         logger.info(`🚀 Running sheet "${sheetId}" for user "${creds.userId}"`);
 
-        // Set current run creds so automation can pick them
-        configManager.setCurrentRunInputs(sheetId, creds);
+        // If multiple activePositions exist
+        if (Array.isArray(creds.activePositions) && creds.activePositions.length > 0) {
+          for (const pos of creds.activePositions) {
+            const runInputs = { ...creds, activePosition: pos };
 
-        try {
-          await automation.start({
-            ...sheet.config,
-            inputs: creds, // pass single creds object
-          });
-          logger.info(`✅ Completed for ${creds.userId}`);
-        } catch (err) {
-          logger.error(`❌ Failed for ${creds.userId}:`, err);
+            // ✅ Set current run inputs for this iteration
+            configManager.setCurrentRunInputs(sheetId, runInputs);
+
+            logger.info(`➡️ Running for position: ${pos}`);
+
+            // Pass the exact current runInputs to runActions
+            console.log(`[DEBUG] Current run inputs for sheet ${sheetId}:`, runInputs);
+            try {
+              await automation.start({
+                ...sheet.config,
+                inputs: runInputs,  // make sure automation uses this
+              });
+            }
+            catch (err) {
+              logger.error(`❌ Failed for ${creds.userId} - ${pos}:`, err);
+            }
+          }
+        } else {
+          // Normal sheet without multiple positions
+          configManager.setCurrentRunInputs(sheetId, creds);
+
+          console.log(`[DEBUG] Current run inputs for sheet ${sheetId}:`, creds);
+
+          try {
+            await automation.start({
+              ...sheet.config,
+              inputs: creds,
+            });
+            logger.info(`✅ Completed for ${creds.userId}`);
+          } catch (err) {
+            logger.error(`❌ Failed for ${creds.userId}:`, err);
+          }
         }
       }
     }

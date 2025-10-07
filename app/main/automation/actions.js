@@ -21,8 +21,35 @@ function getDynamicDate(monthsAgo) {
     return result;
 }
 
-async function runAction(sheetId, page, action) {
+function replaceTokens(str, creds) {
+    if (typeof str !== "string") return str;
+    return str.replace(/{{(.*?)}}/g, (_, key) => {
+        const value = creds[key.trim()];
+        if (value === undefined) {
+            console.warn(`[WARN] Token {{${key}}} is undefined in current runInputs`);
+            return "";
+        }
+        return value;
+    });
+}
+
+async function runAction(sheetId, page, action, creds) {
+    console.log("Current run inputs for sheet:", sheetId, configManager.getCurrentRunInputs(sheetId));
+
     console.log("[DEBUG] runAction called with:", { sheetId, action });
+    // --- Replace tokens like {{activePosition}} ---
+    // --- Replace tokens like {{activePosition}} ---
+    const currentCreds = configManager.getCurrentRunInputs(sheetId) || creds;
+    action.selector = replaceTokens(action.selector, currentCreds);
+    action.value = replaceTokens(action.value, currentCreds);
+    action.searchText = replaceTokens(action.searchText, currentCreds);
+
+    if (!action.selector || action.selector.includes("{{")) {
+        console.warn(
+            `[WARN] Selector unresolved for sheet ${sheetId}. Selector: "${action.selector}"`
+        );
+    }
+
     switch (action.type) {
         case "launch":
             console.log(`[DEBUG] Launch action for site: ${action.site}`);
@@ -260,13 +287,13 @@ async function runAction(sheetId, page, action) {
 
         case "keyboard":
             console.log("Executing keyboard action:",
-              action.description || action.key)
+                action.description || action.key)
             if (action.key) {
-              await page.keyboard.press(action.key, { delay: 100 });
-              console.log(`Pressed key: ${action.key}`);
+                await page.keyboard.press(action.key, { delay: 100 });
+                console.log(`Pressed key: ${action.key}`);
             }
             break;
-            
+
         default:
             console.log(`[DEBUG] Unknown action type: ${action.type}`);
     }
@@ -275,9 +302,10 @@ async function runAction(sheetId, page, action) {
 
 async function runActions(sheetId, page, actions) {
     console.log("[DEBUG] runActions called with:", { sheetId, actions });
+    const creds = configManager.getCurrentRunInputs(sheetId);
     for (const action of actions) {
         console.log("[DEBUG] Running action:", action);
-        await runAction(sheetId, page, action);
+        await runAction(sheetId, page, action, creds);
         console.log("[DEBUG] Finished action:", action.type);
     }
     console.log("[DEBUG] runActions completed");

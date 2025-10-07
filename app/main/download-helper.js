@@ -3,7 +3,6 @@ const path = require("path");
 const logger = require("./logger");
 
 // --- Main function ---
-
 async function waitUntilDownload(
   session,
   downloadPath = "",
@@ -20,29 +19,30 @@ async function waitUntilDownload(
     session.on("Browser.downloadProgress", (e) => {
       if (e.state === "completed") {
         try {
-          // Extract dealer & location safely
+          // Extract dealer & activePosition safely
           const dealerRaw = creds.Dealer_name || creds.dealerName || "";
-          const locationRaw = creds.Location || creds.location || "";
+          const positionRaw = creds.activePosition || "";
 
-          const dealerSafe = dealerRaw.toString().replace(/\s+/g, "_");
-          const locationSafe = locationRaw.toString().replace(/\s+/g, "_");
+          // Sanitize for folder names
+          const dealerSafe = dealerRaw.toString().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
+          const positionSafe = positionRaw.toString().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
 
           // Build directory path
           let targetDir = downloadPath;
           if (dealerSafe) targetDir = path.join(targetDir, dealerSafe);
-          if (locationSafe) targetDir = path.join(targetDir, locationSafe);
+          if (positionSafe) targetDir = path.join(targetDir, positionSafe);
 
           fs.mkdirSync(targetDir, { recursive: true });
 
           const sourcePath = path.resolve(downloadPath, e.guid);
           const destPath = path.resolve(targetDir, guids[e.guid]);
 
-          logger.info("Dealer safe:", dealerSafe);
-          logger.info("Location safe:", locationSafe);
-          logger.info("Target directory:", targetDir);
+          logger.info(`Dealer: ${dealerSafe}`);
+          logger.info(`Position: ${positionSafe}`);
+          logger.info(`Target Directory: ${targetDir}`);
 
           fs.renameSync(sourcePath, destPath);
-          logger.info("Download moved to:", destPath);
+          logger.info("✅ Download moved to:", destPath);
 
           resolve(destPath);
         } catch (err) {
