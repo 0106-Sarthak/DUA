@@ -7,13 +7,16 @@ const logger = require("./logger");
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
-const { generateUserJson } = require("./generate-user"); 
+const { generateUserJson } = require("./generate-user");
 
 function streamLogFile() {
   const logDir = path.join("C:\\DuaReports", "logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 
-  const logFile = path.join(logDir, `${new Date().toISOString().slice(0, 10)}.log`);
+  const logFile = path.join(
+    logDir,
+    `${new Date().toISOString().slice(0, 10)}.log`
+  );
 
   // Ensure file exists
   if (!fs.existsSync(logFile)) fs.writeFileSync(logFile, "");
@@ -46,8 +49,8 @@ app.whenReady().then(async () => {
   createWindow();
 
   setupIPC();
-  streamLogFile(); 
-  generateUserJson(); 
+  streamLogFile();
+  generateUserJson();
   // automation.start(config);
   const config = configManager.getConfig();
   const userInputs = configManager.getUserInputs();

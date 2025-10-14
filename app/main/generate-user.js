@@ -21,13 +21,16 @@ function generateUserJson() {
     logger.info(`Sheets found in workbook: ${workbook.SheetNames.join(", ")}`);
     const jsonOutput = {};
 
-    workbook.SheetNames.forEach(sheetName => {
+    workbook.SheetNames.forEach((sheetName) => {
       logger.info(`Processing sheet: "${sheetName}"`);
 
       const sheet = workbook.Sheets[sheetName];
 
       // Convert sheet to JSON, fill empty cells with ""
-      const sheetData = xlsx.utils.sheet_to_json(sheet, { defval: "", raw: false });
+      const sheetData = xlsx.utils.sheet_to_json(sheet, {
+        defval: "",
+        raw: false,
+      });
       logger.info(`Rows read from sheet "${sheetName}": ${sheetData.length}`);
 
       if (sheetData.length === 0) {
@@ -39,28 +42,34 @@ function generateUserJson() {
 
       // Filter rows with all required fields
       const validRows = sheetData.filter(
-        row => row.Dealer && row.Location && row.ID && row.Password
+        (row) => row.Dealer && row.Location && row.ID && row.Password
       );
 
       if (validRows.length === 0) {
-        logger.warn(`No valid rows found in sheet "${sheetName}". Check column names.`);
+        logger.warn(
+          `No valid rows found in sheet "${sheetName}". Check column names.`
+        );
       }
 
       // Map to required JSON format
-      jsonOutput["test-sheet"] = { // Force key as "test-sheet"
-        inputs: validRows.map(row => ({
+      jsonOutput["test-sheet"] = {
+        // Force key as "test-sheet"
+        inputs: validRows.map((row) => ({
           Dealer_name: row.Dealer,
           Location: row.Location,
           userId: row.ID,
-          password: row.Password
-        }))
+          password: row.Password,
+        })),
       };
 
-      logger.info(`Rows included in JSON from sheet "${sheetName}": ${validRows.length}`);
+      logger.info(
+        `Rows included in JSON from sheet "${sheetName}": ${validRows.length}`
+      );
     });
 
     // Ensure config directory exists
-    if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    if (!fs.existsSync(CONFIG_DIR))
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
 
     fs.writeFileSync(JSON_FILE, JSON.stringify(jsonOutput, null, 2));
     logger.info(`User input JSON successfully generated at: ${JSON_FILE}`);
@@ -70,4 +79,3 @@ function generateUserJson() {
 }
 
 module.exports = { generateUserJson };
-

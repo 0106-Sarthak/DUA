@@ -27,7 +27,9 @@ async function tryOutfilters(page, action) {
   let found = false;
 
   for (let i = 0; i < MAX_PAGES; i++) {
-    console.log(`[DEBUG] Searching page ${i + 1} for selector: ${action.selector}`);
+    console.log(
+      `[DEBUG] Searching page ${i + 1} for selector: ${action.selector}`
+    );
 
     // 🔍 Try to find and click the target element
     found = await page.evaluate((selector) => {
@@ -35,7 +37,11 @@ async function tryOutfilters(page, action) {
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.dispatchEvent(
-          new MouseEvent("click", { bubbles: true, cancelable: true, view: window })
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          })
         );
         return true;
       }
@@ -50,11 +56,14 @@ async function tryOutfilters(page, action) {
     // ⚙️ Click the "Next record set" button dynamically
     const nextClicked = await page.evaluate(() => {
       // Find all visible "Next record set" spans (works even if IDs differ)
-      const nextSpan = [...document.querySelectorAll("span[title='Next record set']")]
-        .find(span => span.offsetParent !== null); // ensure it's visible
+      const nextSpan = [
+        ...document.querySelectorAll("span[title='Next record set']"),
+      ].find((span) => span.offsetParent !== null); // ensure it's visible
 
       if (!nextSpan) {
-        console.warn("[WARN] No visible 'Next record set' span found — pagination ended.");
+        console.warn(
+          "[WARN] No visible 'Next record set' span found — pagination ended."
+        );
         return false;
       }
 
@@ -63,7 +72,9 @@ async function tryOutfilters(page, action) {
       const eventOptions = { bubbles: true, cancelable: true, view: window };
 
       // Dispatch real mouse events to simulate a user click
-      console.log("[DEBUG] Triggering native mouse events on Next record set...");
+      console.log(
+        "[DEBUG] Triggering native mouse events on Next record set..."
+      );
       nextSpan.dispatchEvent(new MouseEvent("mouseover", eventOptions));
       nextSpan.dispatchEvent(new MouseEvent("mousedown", eventOptions));
       nextSpan.dispatchEvent(new MouseEvent("mouseup", eventOptions));
@@ -78,14 +89,15 @@ async function tryOutfilters(page, action) {
       break;
     }
 
-    console.log(`[DEBUG] Clicked Next record set, waiting for table to load...`);
+    console.log(
+      `[DEBUG] Clicked Next record set, waiting for table to load...`
+    );
     await sleep(1500); // ⏳ wait for grid data to refresh
   }
 
   console.warn("[WARN] Element not found after all pages:", action.selector);
   return false;
 }
-
 
 async function runAction(sheetId, page, action) {
   console.log("[DEBUG] runAction called with:", { sheetId, action });

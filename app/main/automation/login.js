@@ -1,4 +1,3 @@
-// automation/login.js
 const configManager = require("../config-manager");
 
 function sleep(ms) {
@@ -21,7 +20,10 @@ async function doLogin(sheetId, page, loginAction) {
       dialogMessage = dialog.message();
       console.log("DEBUG: Dialog appeared (captured):", dialogMessage);
       await dialog.dismiss().catch((err) => {
-        console.log("DEBUG: dialog.dismiss() error (ignored):", err && err.message);
+        console.log(
+          "DEBUG: dialog.dismiss() error (ignored):",
+          err && err.message
+        );
       });
     } catch (err) {
       console.log("DEBUG: dialogHandler error:", err && err.message);
@@ -39,7 +41,10 @@ async function doLogin(sheetId, page, loginAction) {
     try {
       await page.type(field.selector, value);
     } catch (err) {
-      console.log(`DEBUG: Error typing into ${field.selector}:`, err && err.message);
+      console.log(
+        `DEBUG: Error typing into ${field.selector}:`,
+        err && err.message
+      );
       loginFailed = true;
     }
   }
@@ -47,7 +52,9 @@ async function doLogin(sheetId, page, loginAction) {
   // Click submit
   if (loginAction.submit?.selector) {
     try {
-      await page.waitForSelector(loginAction.submit.selector, { timeout: 60000 });
+      await page.waitForSelector(loginAction.submit.selector, {
+        timeout: 60000,
+      });
       console.log("DEBUG: Clicking submit...");
       await page.click(loginAction.submit.selector);
       console.log("DEBUG: Clicked submit.");
@@ -61,7 +68,9 @@ async function doLogin(sheetId, page, loginAction) {
 
   // Stabilize wait
   const stabilizeMs = loginAction.waitAfterSubmit || 20000;
-  console.log(`DEBUG: Waiting ${stabilizeMs}ms to stabilize and capture any dialog...`);
+  console.log(
+    `DEBUG: Waiting ${stabilizeMs}ms to stabilize and capture any dialog...`
+  );
   await sleep(stabilizeMs);
 
   // Check if dialog was captured
@@ -100,7 +109,9 @@ async function doLogin(sheetId, page, loginAction) {
       console.log("DEBUG: Inline login check result:", result);
       loginFailed = !!result;
     } catch (err) {
-      console.log("DEBUG: No inline error detected (wait timed out). Assuming success.");
+      console.log(
+        "DEBUG: No inline error detected (wait timed out). Assuming success."
+      );
       loginFailed = false;
     }
   }

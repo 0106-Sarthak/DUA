@@ -13,7 +13,7 @@ logger.info("Config file path:", configFilePath);
 logger.info("User input file path:", userInputFilePath);
 
 function ensureDirs() {
-  [BASE_DIR, CONFIG_DIR, REPORTS_DIR].forEach(dir => {
+  [BASE_DIR, CONFIG_DIR, REPORTS_DIR].forEach((dir) => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
 }

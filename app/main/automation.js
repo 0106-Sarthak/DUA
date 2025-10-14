@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const cronParser = require("cron-parser");
-const CronExpressionParser = cronParser.CronExpressionParser || cronParser.default;
+const CronExpressionParser =
+  cronParser.CronExpressionParser || cronParser.default;
 const forget = require("require-and-forget");
 const configManager = require("./config-manager");
 const { runWorkflow } = require("./automation/workflow");
@@ -19,9 +20,11 @@ const ACTION_SHEETS_DIR = path.join(BASE_DIR, "sheets");
 const LOGS_DIR = path.join(BASE_DIR, "logs");
 
 // Ensure directories exist
-[BASE_DIR, CONFIG_DIR, REPORTS_DIR, ACTION_SHEETS_DIR, LOGS_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+[BASE_DIR, CONFIG_DIR, REPORTS_DIR, ACTION_SHEETS_DIR, LOGS_DIR].forEach(
+  (dir) => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  }
+);
 
 // Config & user input files
 const configFilePath = path.join(CONFIG_DIR, "config.json");
@@ -29,7 +32,8 @@ const userInputFilePath = path.join(CONFIG_DIR, "user-input.json");
 
 // Puppeteer report download folder
 const reportDownloadDir = REPORTS_DIR;
-if (!fs.existsSync(reportDownloadDir)) fs.mkdirSync(reportDownloadDir, { recursive: true });
+if (!fs.existsSync(reportDownloadDir))
+  fs.mkdirSync(reportDownloadDir, { recursive: true });
 
 // User input store
 let userInputStore = {};
@@ -86,8 +90,7 @@ async function main() {
       const { browser: userBrowser, page } = await launchBrowser();
       browser = userBrowser;
 
-      outerSheetLoop:
-      for (const sheet of configuration.action_sheets || []) {
+      outerSheetLoop: for (const sheet of configuration.action_sheets || []) {
         const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
         if (!fs.existsSync(sheetPath)) {
           console.log(`Action sheet not found: ${sheetPath}`);
@@ -99,35 +102,58 @@ async function main() {
 
         // Determine loop array: for sheet-2, iterate over activePositions
         let loopArray = [null];
-        if (isSheet2 && creds.activePositions && creds.activePositions.length > 0) {
+        if (
+          isSheet2 &&
+          creds.activePositions &&
+          creds.activePositions.length > 0
+        ) {
           loopArray = creds.activePositions;
         }
 
         for (const position of loopArray) {
           if (position) {
-            console.log(`\n🔁 Running ${sheet.name} for activePosition: ${position}`);
-            configManager.setCurrentRunInputs(sheet.id, { ...creds, activePosition: position });
-            console.log("Current run inputs set to:", configManager.getUserInput(sheet.id));
+            console.log(
+              `\n🔁 Running ${sheet.name} for activePosition: ${position}`
+            );
+            configManager.setCurrentRunInputs(sheet.id, {
+              ...creds,
+              activePosition: position,
+            });
+            console.log(
+              "Current run inputs set to:",
+              configManager.getUserInput(sheet.id)
+            );
           } else {
             console.log(`\n🔁 Running ${sheet.name} for user ${userKey}`);
             configManager.setCurrentRunInputs(sheet.id, creds);
           }
 
           try {
-            const success = await runWorkflow(sheet.id, actionSheet, configuration, page);
+            const success = await runWorkflow(
+              sheet.id,
+              actionSheet,
+              configuration,
+              page
+            );
             if (!success) {
               console.log(
-                `❌ Sheet ${sheet.name}${position ? ` at ${position}` : ""} failed for ${userKey}, stopping all sheets for this user.`
+                `❌ Sheet ${sheet.name}${
+                  position ? ` at ${position}` : ""
+                } failed for ${userKey}, stopping all sheets for this user.`
               );
               break outerSheetLoop; // <--- STOP all sheets for this user
             }
 
             console.log(
-              `✅ Finished ${sheet.name}${position ? ` at ${position}` : ""} for ${userKey}`
+              `✅ Finished ${sheet.name}${
+                position ? ` at ${position}` : ""
+              } for ${userKey}`
             );
           } catch (err) {
             console.error(
-              `Error in ${sheet.name}${position ? ` at ${position}` : ""} for ${userKey}:`,
+              `Error in ${sheet.name}${
+                position ? ` at ${position}` : ""
+              } for ${userKey}:`,
               err.message
             );
             break outerSheetLoop;
@@ -140,7 +166,6 @@ async function main() {
       browser = null;
       console.log(`=== Completed all sheets for ${userKey} ===`);
     }
-
   } catch (err) {
     console.error("Error in main:", err.message);
   } finally {

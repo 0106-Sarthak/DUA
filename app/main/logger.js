@@ -9,7 +9,10 @@ if (!fs.existsSync(LOGS_DIR)) {
 }
 
 // Log file name per day
-const logFilePath = path.join(LOGS_DIR, `${new Date().toISOString().slice(0, 10)}.log`);
+const logFilePath = path.join(
+  LOGS_DIR,
+  `${new Date().toISOString().slice(0, 10)}.log`
+);
 
 function writeLog(level, ...messages) {
   const timestamp = new Date().toISOString();
@@ -25,7 +28,6 @@ function writeLog(level, ...messages) {
   fs.appendFileSync(logFilePath, line, "utf8");
   console.log(line.trim());
 }
-
 
 module.exports = {
   info: (...msgs) => writeLog("info", ...msgs),

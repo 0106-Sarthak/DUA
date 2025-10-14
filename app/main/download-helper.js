@@ -55,7 +55,6 @@ async function waitUntilDownload(
   });
 }
 
-
 // --- Exports ---
 
 module.exports = {
