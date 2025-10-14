@@ -27,20 +27,15 @@ async function tryOutfilters(page, action) {
   let found = false;
 
   for (let i = 0; i < MAX_PAGES; i++) {
-    console.log(
-      `[DEBUG] Searching page ${i + 1} for selector: ${action.selector}`
-    );
+    console.log(`[DEBUG] Searching page ${i + 1} for selector: ${action.selector}`);
 
+    // 🔍 Try to find and click the target element
     found = await page.evaluate((selector) => {
       const el = document.querySelector(selector);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.dispatchEvent(
-          new MouseEvent("click", {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-          })
+          new MouseEvent("click", { bubbles: true, cancelable: true, view: window })
         );
         return true;
       }
@@ -52,49 +47,45 @@ async function tryOutfilters(page, action) {
       return true;
     }
 
+    // ⚙️ Click the "Next record set" button dynamically
     const nextClicked = await page.evaluate(() => {
-      const td = document.querySelector("#next_pager_s_1_l");
-      const span = td?.querySelector(".ui-icon-seek-next");
-      console.log("[DEBUG] Next pager td:", td);
-      console.log("[DEBUG] Next pager span:", span);
+      // Find all visible "Next record set" spans (works even if IDs differ)
+      const nextSpan = [...document.querySelectorAll("span[title='Next record set']")]
+        .find(span => span.offsetParent !== null); // ensure it's visible
 
-      const el = span || td;
-      if (!el) {
-        console.warn("[WARN] Next pager element not found");
+      if (!nextSpan) {
+        console.warn("[WARN] No visible 'Next record set' span found — pagination ended.");
         return false;
       }
 
-      const eventOptions = {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      };
+      console.log("[DEBUG] Found Next record set span:", nextSpan);
 
-      console.log(
-        "[DEBUG] Triggering native mouse events on Next record set..."
-      );
-      el.dispatchEvent(new MouseEvent("mouseover", eventOptions));
-      el.dispatchEvent(new MouseEvent("mousedown", eventOptions));
-      el.dispatchEvent(new MouseEvent("mouseup", eventOptions));
-      el.dispatchEvent(new MouseEvent("click", eventOptions));
-      console.log("[DEBUG] Mouse event chain dispatched on inner span.");
+      const eventOptions = { bubbles: true, cancelable: true, view: window };
+
+      // Dispatch real mouse events to simulate a user click
+      console.log("[DEBUG] Triggering native mouse events on Next record set...");
+      nextSpan.dispatchEvent(new MouseEvent("mouseover", eventOptions));
+      nextSpan.dispatchEvent(new MouseEvent("mousedown", eventOptions));
+      nextSpan.dispatchEvent(new MouseEvent("mouseup", eventOptions));
+      nextSpan.dispatchEvent(new MouseEvent("click", eventOptions));
+
+      console.log("[DEBUG] Mouse event chain dispatched successfully.");
       return true;
     });
 
     if (!nextClicked) {
-      console.log("[DEBUG] Next button missing, pagination ended.");
+      console.log("[DEBUG] Next button missing or disabled, pagination ended.");
       break;
     }
 
-    console.log(
-      `[DEBUG] Clicked Next record set, waiting for table to load...`
-    );
-    await sleep(1500);
+    console.log(`[DEBUG] Clicked Next record set, waiting for table to load...`);
+    await sleep(1500); // ⏳ wait for grid data to refresh
   }
 
   console.warn("[WARN] Element not found after all pages:", action.selector);
   return false;
 }
+
 
 async function runAction(sheetId, page, action) {
   console.log("[DEBUG] runAction called with:", { sheetId, action });
