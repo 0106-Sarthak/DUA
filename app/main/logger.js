@@ -11,20 +11,25 @@ if (!fs.existsSync(LOGS_DIR)) {
 // Log file name per day
 const logFilePath = path.join(LOGS_DIR, `${new Date().toISOString().slice(0, 10)}.log`);
 
-function writeLog(level, message) {
+function writeLog(level, ...messages) {
   const timestamp = new Date().toISOString();
-  const line = `[${timestamp}] [${level.toUpperCase()}] ${message}\n`;
+  const line =
+    `[${timestamp}] [${level.toUpperCase()}] ` +
+    messages
+      .map((m) =>
+        typeof m === "object" ? JSON.stringify(m, null, 2) : String(m)
+      )
+      .join(" ") +
+    "\n";
 
-  // Write to file
   fs.appendFileSync(logFilePath, line, "utf8");
-
-  // Also output to console
   console.log(line.trim());
 }
 
+
 module.exports = {
-  info: (msg) => writeLog("info", msg),
-  warn: (msg) => writeLog("warn", msg),
-  error: (msg) => writeLog("error", msg),
-  debug: (msg) => writeLog("debug", msg),
+  info: (...msgs) => writeLog("info", ...msgs),
+  warn: (...msgs) => writeLog("warn", ...msgs),
+  error: (...msgs) => writeLog("error", ...msgs),
+  debug: (...msgs) => writeLog("debug", ...msgs),
 };

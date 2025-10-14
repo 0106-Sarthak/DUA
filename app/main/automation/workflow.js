@@ -45,15 +45,6 @@ async function runWorkflow(sheetId, sheet, configuration, page) {
         console.error("Workflow error caught:", err);
         return false;
 
-    } finally {
-        if (browser) {
-            try {
-                await browser.close();
-                console.log("Browser closed");
-            } catch (closeErr) {
-                console.error("Error closing browser:", closeErr);
-            }
-        }
     }
 }
 

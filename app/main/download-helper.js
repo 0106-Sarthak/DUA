@@ -22,7 +22,7 @@ async function waitUntilDownload(
         try {
           // Extract dealer & location safely
           const dealerRaw = creds.Dealer_name || creds.dealerName || "";
-          const locationRaw = creds.Location || creds.location || "";
+          const locationRaw = creds.activePosition || "";
 
           const dealerSafe = dealerRaw.toString().replace(/\s+/g, "_");
           const locationSafe = locationRaw.toString().replace(/\s+/g, "_");
