@@ -1,4 +1,5 @@
 const configManager = require("../config-manager");
+const logger = require("../logger");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -7,10 +8,8 @@ function sleep(ms) {
 async function doLogin(sheetId, page, loginAction) {
   let loginFailed = false;
   let dialogMessage = null;
-
-  console.log("DEBUG: Starting login action...");
+  logger.debug("Starting login action...");
   if (!loginAction) {
-    console.log("DEBUG: No loginAction provided.");
     return true; // treat as failure
   }
 
@@ -18,15 +17,12 @@ async function doLogin(sheetId, page, loginAction) {
   const dialogHandler = async (dialog) => {
     try {
       dialogMessage = dialog.message();
-      console.log("DEBUG: Dialog appeared (captured):", dialogMessage);
+      logger.debug("Dialog appeared (captured):", dialogMessage);
       await dialog.dismiss().catch((err) => {
-        console.log(
-          "DEBUG: dialog.dismiss() error (ignored):",
-          err && err.message
-        );
+        logger.debug("Dialog dismiss error (ignored):", err && err.message);
       });
     } catch (err) {
-      console.log("DEBUG: dialogHandler error:", err && err.message);
+      logger.debug("Dialog handler error:", err && err.message);
     }
   };
 
@@ -37,14 +33,9 @@ async function doLogin(sheetId, page, loginAction) {
     const value = field.useUserInput
       ? configManager.getUserInput(sheetId, field.inputToken)
       : field.value;
-    console.log(`DEBUG: Typing into ${field.selector} = ${value}`);
     try {
       await page.type(field.selector, value);
     } catch (err) {
-      console.log(
-        `DEBUG: Error typing into ${field.selector}:`,
-        err && err.message
-      );
       loginFailed = true;
     }
   }
@@ -55,41 +46,37 @@ async function doLogin(sheetId, page, loginAction) {
       await page.waitForSelector(loginAction.submit.selector, {
         timeout: 60000,
       });
-      console.log("DEBUG: Clicking submit...");
       await page.click(loginAction.submit.selector);
-      console.log("DEBUG: Clicked submit.");
+      logger.debug("Clicked submit.");
     } catch (err) {
-      console.log("DEBUG: Could not click submit:", err && err.message);
+      logger.debug("Could not click submit:", err && err.message);
       loginFailed = true;
     }
   } else {
-    console.log("DEBUG: No submit selector provided.");
+    logger.debug("No submit selector provided.");
   }
 
   // Stabilize wait
   const stabilizeMs = loginAction.waitAfterSubmit || 20000;
-  console.log(
-    `DEBUG: Waiting ${stabilizeMs}ms to stabilize and capture any dialog...`
-  );
+  logger.debug(`Waiting ${stabilizeMs}ms to stabilize and capture any dialog...`);
   await sleep(stabilizeMs);
 
   // Check if dialog was captured
   if (dialogMessage) {
-    console.log("DEBUG: Dialog captured during stabilization:", dialogMessage);
+    logger.debug("Dialog captured during stabilization:", dialogMessage);
     if (dialogMessage.includes("Max Concurrent Sessions")) {
-      console.log("DEBUG: Max concurrent sessions appeared -> login blocked.");
       loginFailed = true;
     } else {
-      console.log("DEBUG: Dialog appeared -> treating as login failed.");
+      logger.debug("Dialog appeared -> treating as login failed.");
       loginFailed = true;
     }
   } else {
-    console.log("DEBUG: No dialog captured during stabilization.");
+    logger.debug("No dialog captured during stabilization.");
   }
 
   // If not failed, check inline error indicators
   if (!loginFailed) {
-    console.log("DEBUG: Checking inline error indicators...");
+    logger.debug("Checking inline error indicators...");
     try {
       const handle = await page.waitForFunction(
         () => {
@@ -106,17 +93,14 @@ async function doLogin(sheetId, page, loginAction) {
       );
 
       const result = await handle.jsonValue();
-      console.log("DEBUG: Inline login check result:", result);
       loginFailed = !!result;
     } catch (err) {
-      console.log(
-        "DEBUG: No inline error detected (wait timed out). Assuming success."
+      logger.debug(
+        "No inline error detected (wait timed out). Assuming success."
       );
       loginFailed = false;
     }
   }
-
-  console.log("DEBUG: Final loginFailed =", loginFailed);
   return loginFailed; // true => failed, false => success
 }
 

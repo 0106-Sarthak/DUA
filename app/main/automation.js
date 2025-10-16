@@ -7,6 +7,7 @@ const forget = require("require-and-forget");
 const configManager = require("./config-manager");
 const { runWorkflow } = require("./automation/workflow");
 const { launchBrowser } = require("./automation/browser");
+const logger = require("./logger");
 
 // Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
@@ -41,10 +42,10 @@ const refreshUserInput = async () => {
   try {
     if (fs.existsSync(userInputFilePath)) {
       userInputStore = JSON.parse(fs.readFileSync(userInputFilePath, "utf8"));
-      console.log("Refreshed userInputStore:", userInputStore);
+      logger.info("User input refreshed:", userInputStore);
     }
   } catch (err) {
-    console.error("Error reading user input file", err);
+    logger.error("Error reading user input file", err);
   }
 };
 
@@ -54,7 +55,7 @@ let busy = false;
 
 async function main() {
   if (busy) {
-    console.log("Main loop is busy, skipping this run.");
+    logger.info("Automation already running, skipping this run.");
     return;
   }
   busy = true;
@@ -62,15 +63,14 @@ async function main() {
   let browser;
 
   try {
-    console.log("Checking configuration...");
     if (!fs.existsSync(configFilePath)) {
-      console.log("Configuration file not found at", configFilePath);
+      logger.error("Configuration file not found at", configFilePath);
       busy = false;
       return;
     }
 
     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-    console.log("Loaded configuration:", configuration);
+    logger.info("Loaded configuration:", configuration);
 
     await refreshUserInput();
 
@@ -85,7 +85,7 @@ async function main() {
 
     // ----- Labeled loop for sheets -----
     for (const [userKey, creds] of Object.entries(allUsers)) {
-      console.log(`\n=== Starting all sheets for user: ${userKey} ===`);
+      logger.info(`\n=== Starting all sheets for user: ${userKey} ===`);
 
       const { browser: userBrowser, page } = await launchBrowser();
       browser = userBrowser;
@@ -93,7 +93,7 @@ async function main() {
       outerSheetLoop: for (const sheet of configuration.action_sheets || []) {
         const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
         if (!fs.existsSync(sheetPath)) {
-          console.log(`Action sheet not found: ${sheetPath}`);
+          logger.warn(`Action sheet not found: ${sheetPath}`);
           continue;
         }
 
@@ -112,19 +112,14 @@ async function main() {
 
         for (const position of loopArray) {
           if (position) {
-            console.log(
-              `\n🔁 Running ${sheet.name} for activePosition: ${position}`
-            );
+            
             configManager.setCurrentRunInputs(sheet.id, {
               ...creds,
               activePosition: position,
             });
-            console.log(
-              "Current run inputs set to:",
-              configManager.getUserInput(sheet.id)
-            );
+            logger.info(`🔁 Running ${sheet.name} for user ${userKey} at position ${position}`);
           } else {
-            console.log(`\n🔁 Running ${sheet.name} for user ${userKey}`);
+            logger.info(`🔁 Running ${sheet.name} for user ${userKey}`);
             configManager.setCurrentRunInputs(sheet.id, creds);
           }
 
@@ -136,21 +131,17 @@ async function main() {
               page
             );
             if (!success) {
-              console.log(
-                `❌ Sheet ${sheet.name}${
+              logger.error(`Sheet ${sheet.name}${
                   position ? ` at ${position}` : ""
-                } failed for ${userKey}, stopping all sheets for this user.`
-              );
+                } failed for ${userKey}, stopping all sheets for this user.`);
               break outerSheetLoop; // <--- STOP all sheets for this user
             }
 
-            console.log(
-              `✅ Finished ${sheet.name}${
-                position ? ` at ${position}` : ""
-              } for ${userKey}`
-            );
+            logger.info(`✅ Finished ${sheet.name}${
+              position ? ` at ${position}` : ""
+            } for ${userKey}`);
           } catch (err) {
-            console.error(
+            logger.error(
               `Error in ${sheet.name}${
                 position ? ` at ${position}` : ""
               } for ${userKey}:`,
@@ -161,16 +152,15 @@ async function main() {
         }
       }
 
-      console.log(`Closing browser for ${userKey}`);
       await userBrowser.close();
       browser = null;
-      console.log(`=== Completed all sheets for ${userKey} ===`);
+      logger.info(`=== Completed all sheets for ${userKey} ===`);
     }
   } catch (err) {
-    console.error("Error in main:", err.message);
+    logger.error("Error in main:", err.message);
   } finally {
     if (browser) {
-      console.log("Closing leftover browser...");
+      logger.info("Closing leftover browser...");
       await browser.close();
     }
     busy = false;
@@ -178,9 +168,9 @@ async function main() {
 }
 
 async function start() {
-  console.log("Automation started...");
+  logger.info("Automation started...");
   await main();
-  console.log("Automation finished. Exiting...");
+  logger.info("Automation finished. Exiting...");
   process.exit(0);
 }
 

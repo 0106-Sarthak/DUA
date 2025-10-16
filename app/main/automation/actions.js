@@ -2,6 +2,7 @@ const { waitUntilDownload } = require("../download-helper");
 const { format } = require("date-fns");
 const configManager = require("../config-manager");
 const reportDownloadDir = require("../constants").reportDownloadDir;
+const logger = require("../logger");
 
 function sleep(ms) {
   console.log(`[DEBUG] sleep called with ms: ${ms}`);
@@ -9,7 +10,6 @@ function sleep(ms) {
 }
 
 function getDynamicDate(monthsAgo) {
-  console.log(`[DEBUG] getDynamicDate called with monthsAgo: ${monthsAgo}`);
   const today = new Date();
   today.setMonth(today.getMonth() - monthsAgo);
   today.setDate(1);
@@ -17,20 +17,15 @@ function getDynamicDate(monthsAgo) {
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const year = today.getFullYear();
   const result = `>=${day}/${month}/${year}`;
-  console.log(`[DEBUG] getDynamicDate result: ${result}`);
+  logger.debug(`getDynamicDate result: ${result}`);
   return result;
 }
 
 async function tryOutfilters(page, action) {
-  console.log("[DEBUG] tryOutfilters started for:", action.selector);
   const MAX_PAGES = 30;
   let found = false;
 
   for (let i = 0; i < MAX_PAGES; i++) {
-    console.log(
-      `[DEBUG] Searching page ${i + 1} for selector: ${action.selector}`
-    );
-
     // 🔍 Try to find and click the target element
     found = await page.evaluate((selector) => {
       const el = document.querySelector(selector);
@@ -49,11 +44,11 @@ async function tryOutfilters(page, action) {
     }, action.selector);
 
     if (found) {
-      console.log(`[DEBUG] Element found and clicked on page ${i + 1}`);
+      logger.debug(`Element found and clicked on page ${i + 1}`);
       return true;
     }
 
-    // ⚙️ Click the "Next record set" button dynamically
+    // Click the "Next record set" button dynamically
     const nextClicked = await page.evaluate(() => {
       // Find all visible "Next record set" spans (works even if IDs differ)
       const nextSpan = [
@@ -61,106 +56,81 @@ async function tryOutfilters(page, action) {
       ].find((span) => span.offsetParent !== null); // ensure it's visible
 
       if (!nextSpan) {
-        console.warn(
-          "[WARN] No visible 'Next record set' span found — pagination ended."
-        );
         return false;
       }
-
-      console.log("[DEBUG] Found Next record set span:", nextSpan);
 
       const eventOptions = { bubbles: true, cancelable: true, view: window };
 
       // Dispatch real mouse events to simulate a user click
-      console.log(
-        "[DEBUG] Triggering native mouse events on Next record set..."
-      );
       nextSpan.dispatchEvent(new MouseEvent("mouseover", eventOptions));
       nextSpan.dispatchEvent(new MouseEvent("mousedown", eventOptions));
       nextSpan.dispatchEvent(new MouseEvent("mouseup", eventOptions));
       nextSpan.dispatchEvent(new MouseEvent("click", eventOptions));
 
-      console.log("[DEBUG] Mouse event chain dispatched successfully.");
       return true;
     });
 
     if (!nextClicked) {
-      console.log("[DEBUG] Next button missing or disabled, pagination ended.");
+      logger.debug("Next button missing or disabled, pagination ended.");
       break;
     }
 
-    console.log(
-      `[DEBUG] Clicked Next record set, waiting for table to load...`
-    );
-    await sleep(1500); // ⏳ wait for grid data to refresh
+    logger.debug("Clicked Next record set, waiting for table to load...");
+    await sleep(1500); 
   }
 
-  console.warn("[WARN] Element not found after all pages:", action.selector);
+  logger.warn("Element not found after all pages:", action.selector);
   return false;
 }
 
 async function runAction(sheetId, page, action) {
-  console.log("[DEBUG] runAction called with:", { sheetId, action });
   const currentInputs = configManager.getCurrentRunInputs(sheetId) || {};
-  console.log("current creds", currentInputs);
   const activePosition = currentInputs.activePosition || null;
-
-  console.log("here is my action", action.dynamicPosition);
 
   // check whether the action is of type dynamicPosition
   if (action.dynamicPosition === true) {
-    console.log("[DEBUG] dynamicPosition action detected");
     if (!activePosition) {
-      console.warn("[WARN] No activePosition found for dynamicPosition action");
+      logger.warn("No activePosition found for dynamicPosition action");
       return;
     }
 
     action.selector = `td[title='${activePosition}']`;
-    console.log("[DEBUG] Updated action selector:", action.selector);
-    console.log(`[DEBUG] Using dynamic selector: ${action.selector}`);
+    logger.debug(`Using dynamic selector: ${action.selector}`);
   }
-
-  console.log("[DEBUG] runAction called with:", { sheetId, action });
 
   switch (action.type) {
     case "launch":
-      console.log(`[DEBUG] Launch action for site: ${action.site}`);
       try {
         await page.goto(action.site, {
           waitUntil: "networkidle2",
           timeout: 60000,
         });
-        console.log(`[DEBUG] Navigation complete for site: ${action.site}`);
       } catch (err) {
-        console.log(`[DEBUG] Navigation failed: ${err.message}`);
+        logger.debug(`Navigation failed: ${err.message}`);
         try {
-          console.log("[DEBUG] Attempting to reload the page...");
+          logger.debug("Attempting to reload the page...");
           await page.reload({
             waitUntil: "networkidle2",
             timeout: 60000,
           });
-          console.log("[DEBUG] Reload successful");
+          logger.debug("Reload successful");
         } catch (reloadErr) {
-          console.log(`[DEBUG] Reload failed: ${reloadErr.message}`);
+          logger.debug(`Reload failed: ${reloadErr.message}`);
         }
       }
       break;
 
     case "wait":
-      console.log("[DEBUG] Waiting for duration:", action.duration);
       await sleep(action.duration);
-      console.log("[DEBUG] Wait completed");
       break;
 
     case "click":
-      console.log("[DEBUG] Click action object:", action);
-
       if (action.selector.startsWith("//")) {
         action.selector = action.selector.replace(
           "{{searchText}}",
           action.searchText
         );
-        console.log("[DEBUG] Waiting for XPath:", action.selector);
+        logger.debug(`Waiting for XPath: ${action.selector}`);
         try {
           await page.waitForFunction(
             (xpath) => {
@@ -176,45 +146,24 @@ async function runAction(sheetId, page, action) {
             { timeout: 60000 },
             action.selector
           );
-          console.log("[DEBUG] XPath element found, executing click logic.");
+          logger.debug("XPath element found, executing click logic.");
 
           await page.evaluate((searchText) => {
-            console.log("[DEBUG] Searching for links containing:", searchText);
             const links = Array.from(document.querySelectorAll("a")).filter(
               (a) => a.textContent.includes(`${searchText}`)
             );
 
             if (links.length === 0) {
-              console.error(
-                `[DEBUG] No links found containing '${searchText}'`
-              );
               return;
             }
-            console.log(
-              `[DEBUG] Found ${links.length} link(s) containing '${searchText}'.`
-            );
 
             links.forEach((link, index) => {
-              console.log(
-                `[DEBUG] Checking link ${index + 1}:`,
-                link.outerHTML
-              );
-
               const onclickCode = link.getAttribute("onclick");
-              if (onclickCode) {
-                console.log(
-                  `[DEBUG] Executing onclick on link ${index + 1}:`,
-                  onclickCode
-                );
+              if (onclickCode) {               
                 if (onclickCode.trim().startsWith("return")) {
                   const code = onclickCode.replace(/^return\s+/, "");
-                  console.log(
-                    `[DEBUG] Executing onclick after removing 'return':`,
-                    code
-                  );
                   eval(code);
                 } else {
-                  console.log(`[DEBUG] Executing onclick as is:`, onclickCode);
                   eval(onclickCode);
                 }
               } else {
@@ -231,148 +180,105 @@ async function runAction(sheetId, page, action) {
                 link.dispatchEvent(new MouseEvent("mousedown", eventOptions));
                 link.dispatchEvent(new MouseEvent("mouseup", eventOptions));
                 link.dispatchEvent(new MouseEvent("click", eventOptions));
-                console.log("[DEBUG] Native click executed.");
               }
             });
           }, action.searchText);
-          console.log("[DEBUG] XPath click logic completed");
         } catch (err) {
-          console.error("[DEBUG] Error waiting for XPath:", err);
+          logger.error("[DEBUG] Error waiting for XPath:", err);
         }
       } else {
-        console.log("[DEBUG] Waiting for selector:", action.selector);
+        logger.debug(`Waiting for selector: ${action.selector}`);
 
         try {
-          console.log(
-            "[DEBUG] Triggering native click event for:",
-            action.selector
-          );
           if (action.dynamicPosition) {
             const success = await tryOutfilters(page, action);
             if (success) {
-              console.log(
-                "[DEBUG] DynamicPosition handled successfully (pagination)."
-              );
-              break; // stop further click logic
+              break;
             } else {
-              console.log(
+              logger.debug(
                 "[DEBUG] Dynamic element not found after pagination, continuing normal click."
               );
             }
           }
           await page.click(action.selector);
-          console.log("[DEBUG] Native click executed:", action.selector);
-
-          console.log("[DEBUG] Click executed, waiting for navigation.");
-
           if (action.initiatesDownload) {
-            console.log("[DEBUG] Setting up download behavior...");
+            logger.debug("Setting up download behavior...");
 
             const client = await page.createCDPSession();
-            console.log("[DEBUG] CDP session created");
             await client.send("Browser.setDownloadBehavior", {
               behavior: "allowAndName",
               downloadPath: reportDownloadDir,
               eventsEnabled: true,
             });
-            console.log("[DEBUG] Download behavior set");
-
+            
             const prefix = action.filePrefix || "";
             const readableDate = format(new Date(), "yyyyMMdd_HHmmss");
             const creds = configManager.getCurrentRunInputs(sheetId);
             const downloadDir = reportDownloadDir;
 
-            console.log("[DEBUG] Waiting for download to complete...");
             const finalFilePath = await waitUntilDownload(
               client,
               downloadDir,
               readableDate + "-" + prefix + "-",
               creds
             );
-            console.log("[DEBUG] Download completed:", finalFilePath);
+            logger.debug("[DEBUG] Download completed:", finalFilePath);
             await client.detach();
-            console.log("[DEBUG] CDP session detached");
           }
         } catch (err) {
-          console.error("[DEBUG] Error clicking element for selector:", err);
+          logger.error("Error clicking element for selector:", err);
         }
       }
-      console.log("[DEBUG] Click action completed");
+      logger.debug("[DEBUG] Click action completed");
       break;
 
     case "type":
-      console.log("[DEBUG] Type action object:", action);
-
       let value = action.value;
 
       if (value === "dynamic-date") {
         value = getDynamicDate(action.month);
-        console.log("[DEBUG] Using dynamic date:", value);
+        logger.debug("[DEBUG] Using dynamic date:", value);
       }
-      console.log(
-        "[DEBUG] Typing in selector:",
-        action.selector,
-        "value:",
-        value
-      );
       await page.waitForSelector(action.selector, {
         visible: true,
         timeout: 60000,
       });
-      console.log("[DEBUG] Selector found for typing:", action.selector);
       await page.type(action.selector, value, { delay: 100 });
-      console.log("[DEBUG] Typing completed for selector:", action.selector);
       break;
 
     case "logout":
-      console.log("[DEBUG] Logout action object:", action);
-
       if (!action.steps || !Array.isArray(action.steps)) {
-        console.log("[DEBUG] Logout steps not defined or invalid.");
         break;
       }
 
       for (const step of action.steps) {
-        console.log(
-          `[DEBUG] Waiting for logout step: ${step.description} (${step.selector})`
-        );
         await page.waitForSelector(step.selector, {
           visible: true,
           timeout: 60000,
         });
-        console.log(`[DEBUG] Found logout step, clicking: ${step.selector}`);
         await page.click(step.selector);
-        console.log(`[DEBUG] Clicked logout step: ${step.selector}`);
       }
 
-      console.log("[DEBUG] Logout action completed.");
+      logger.debug("[DEBUG] Logout action completed.");
       break;
 
     case "keyboard":
-      console.log(
-        "Executing keyboard action:",
-        action.description || action.key
-      );
       if (action.key) {
         await page.keyboard.press(action.key, { delay: 100 });
-        console.log(`Pressed key: ${action.key}`);
       }
       break;
 
     default:
-      console.log(`[DEBUG] Unknown action type: ${action.type}`);
+      logger.debug(`[DEBUG] Unknown action type: ${action.type}`);
   }
-  console.log("[DEBUG] runAction completed for type:", action.type);
+  logger.debug("[DEBUG] runAction completed for type:", action.type);
 }
 
 async function runActions(sheetId, page, actions) {
-  console.log("[DEBUG] runActions called with:", { sheetId, actions });
   for (const action of actions) {
-    console.log("[DEBUG] Running action:", action);
     await runAction(sheetId, page, action);
-    console.log("[DEBUG] Finished action:", action.type);
   }
-  console.log("[DEBUG] runActions completed");
+  logger.debug("All actions completed for sheetId:", sheetId);
 }
 
 module.exports = { runActions };
