@@ -12,7 +12,7 @@ async function runWorkflow(sheetId, sheet, configuration, page) {
       logger.error("sheet.actions is missing or not an array");
       return false;
     }
-
+    logger.debug("Total actions to execute:", sheet.actions.length);
     // Iterate over all actions and execute via switch
     for (const action of sheet.actions) {
       logger.debug("Executing action:", action.type);

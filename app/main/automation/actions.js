@@ -244,6 +244,7 @@ async function runAction(sheetId, page, action) {
         timeout: 60000,
       });
       await page.type(action.selector, value, { delay: 100 });
+      logger.debug("[DEBUG] Type action completed with value:", value);
       break;
 
     case "logout":
@@ -270,6 +271,7 @@ async function runAction(sheetId, page, action) {
 
     default:
       logger.debug(`[DEBUG] Unknown action type: ${action.type}`);
+      break;
   }
   logger.debug("[DEBUG] runAction completed for type:", action.type);
 }
