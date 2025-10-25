@@ -98,37 +98,30 @@ async function main() {
         }
 
         const actionSheet = forget(sheetPath);
+        const isSheet2 = sheet.name === "sheet-2";
 
-        // Check cron schedule (same logic as before)
-        let shouldRun = false;
-        const now = new Date();
-        for (const cronExpr of Object.values(sheet.config?.runtimes || {})) {
-          try {
-            const interval = CronExpressionParser.parse(cronExpr, {
-              currentDate: new Date(now.getTime() - 1000),
+        // Determine loop array: for sheet-2, iterate over activePositions
+        let loopArray = [null];
+        if (
+          isSheet2 &&
+          creds.activePositions &&
+          creds.activePositions.length > 0
+        ) {
+          loopArray = creds.activePositions;
+        }
+
+        for (const position of loopArray) {
+          if (position) {
+            
+            configManager.setCurrentRunInputs(sheet.id, {
+              ...creds,
+              activePosition: position,
             });
-            const next = interval.next().toDate();
-            if (
-              Math.abs(next.getTime() - now.getTime()) < 60000 &&
-              (!alreadyRan[sheet.id] ||
-                alreadyRan[sheet.id].getTime() !== next.getTime())
-            ) {
-              shouldRun = true;
-              alreadyRan[sheet.id] = next;
-              break;
-            }
-          } catch (err) {
-            console.error(`Cron error in ${sheet.name}:`, err.message);
+            logger.info(`🔁 Running ${sheet.name} for user ${userKey} at position ${position}`);
+          } else {
+            logger.info(`🔁 Running ${sheet.name} for user ${userKey}`);
+            configManager.setCurrentRunInputs(sheet.id, creds);
           }
-        }
-
-        if (!shouldRun) {
-          console.log(`Skipping sheet ${sheet.name} for ${userKey}.`);
-          continue;
-        }
-
-        console.log(`➡️ Running sheet ${sheet.name} for ${userKey}`);
-        configManager.setCurrentRunInputs(sheet.id, creds);
 
           try {
             const success = await runWorkflow(
@@ -175,9 +168,9 @@ async function main() {
 }
 
 async function start() {
-  console.log("Automation started...");
+  logger.info("Automation started...");
   await main();
-  console.log("Automation finished. Exiting...");
+  logger.info("Automation finished. Exiting...");
   process.exit(0);
 }
 
