@@ -21,7 +21,7 @@ async function waitUntilDownload(
         try {
           // Extract dealer & activePosition safely
           const dealerRaw = creds.Dealer_name || creds.dealerName || "";
-          const positionRaw = creds.activePosition || "";
+          const locationRaw = creds.activePosition || "";
 
           // Sanitize for folder names
           const dealerSafe = dealerRaw.toString().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
@@ -54,7 +54,6 @@ async function waitUntilDownload(
     });
   });
 }
-
 
 // --- Exports ---
 

@@ -5,148 +5,77 @@ const CronExpressionParser =
   cronParser.CronExpressionParser || cronParser.default;
 const forget = require("require-and-forget");
 const configManager = require("./config-manager");
-// const logger = require("./logger");
 const { runWorkflow } = require("./automation/workflow");
-
 const { launchBrowser } = require("./automation/browser");
+const logger = require("./logger");
 
-// Set Chrome executable path for Windows
+// Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 console.log("Chrome executable path:", chromePath);
 
-// const BASE_DIR = process.env.DUA_DATA_PATH || "C:\\dua-data";
-// const BASE_DIR = path.join(__dirname, "../data");
-// logger.info("Project dir:", BASE_DIR);
-
+// Base directories
 const BASE_DIR = "C:\\DuaReports";
 const CONFIG_DIR = path.join(BASE_DIR, "config");
 const REPORTS_DIR = path.join(BASE_DIR, "reports");
 const ACTION_SHEETS_DIR = path.join(BASE_DIR, "sheets");
 const LOGS_DIR = path.join(BASE_DIR, "logs");
 
-// const PROPER_DIRNAME = path.join(app.getPath("userData"));*
-
-// Ensure base directories exist
-if (!fs.existsSync(BASE_DIR)) {
-  fs.mkdirSync(BASE_DIR, { recursive: true });
-  console.log("Created BASE_DIR:", BASE_DIR);
-}
-
-const configFilePath = path.join(BASE_DIR, "config", "config.json");
-const userInputFilePath = path.join(BASE_DIR, "config", "user-input.json");
-const actionSheetsDir = path.join(BASE_DIR, "sheets");
-const logsDir = path.join(BASE_DIR, "logs");
-const reportsDir = path.join(BASE_DIR, "reports");
-
-[CONFIG_DIR, REPORTS_DIR, ACTION_SHEETS_DIR, LOGS_DIR].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log("Created directory:", dir);
+// Ensure directories exist
+[BASE_DIR, CONFIG_DIR, REPORTS_DIR, ACTION_SHEETS_DIR, LOGS_DIR].forEach(
+  (dir) => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
-});
+);
 
-console.log("Config file path:", configFilePath);
-console.log("User input file path:", userInputFilePath);
-console.log("Action sheets dir:", actionSheetsDir);
-console.log("Logs dir:", logsDir);
-console.log("Reports dir:", reportsDir);
+// Config & user input files
+const configFilePath = path.join(CONFIG_DIR, "config.json");
+const userInputFilePath = path.join(CONFIG_DIR, "user-input.json");
 
-// Ensure action-sheets folder exists
-if (!fs.existsSync(actionSheetsDir)) {
-  fs.mkdirSync(actionSheetsDir, { recursive: true });
-  console.log("Created actionSheetsDir:", actionSheetsDir);
-}
+// Puppeteer report download folder
+const reportDownloadDir = REPORTS_DIR;
+if (!fs.existsSync(reportDownloadDir))
+  fs.mkdirSync(reportDownloadDir, { recursive: true });
 
-// Utility Functions
-
-const formatDate = (date) => {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
-const getCurrentDate = () => formatDate(new Date());
-const getYesterday = () => formatDate(new Date(Date.now() - 86400000));
-
-const generateDateForToken = (token) => {
-  if (token === "today") return getCurrentDate();
-  if (token === "yesterday") return getYesterday();
-  return "";
-};
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// User Input Store
+// User input store
 let userInputStore = {};
 const refreshUserInput = async () => {
   try {
     if (fs.existsSync(userInputFilePath)) {
       userInputStore = JSON.parse(fs.readFileSync(userInputFilePath, "utf8"));
-      console.log("Refreshed userInputStore:", userInputStore);
+      logger.info("User input refreshed:", userInputStore);
     }
   } catch (err) {
-    // console.error("Error reading user input file", err);
-    console.error("Error reading user input file", err);
+    logger.error("Error reading user input file", err);
   }
 };
 
-// Puppeteer & ActionSheet Executor
-const reportDownloadDir = path.join(BASE_DIR, "reports");
-
-if (!fs.existsSync(reportDownloadDir)) {
-  fs.mkdirSync(reportDownloadDir, { recursive: true });
-  console.log("Created reportDownloadDir:", reportDownloadDir);
-}
-
-// Main Automation Loop
+// Main automation loop
 let configuration;
 let busy = false;
-let alreadyRan = {};
 
-const deepMerge = (local, remote) => {
-  const merged = { ...local };
-  for (const key in remote) {
-    if (remote.hasOwnProperty(key)) {
-      merged[key] =
-        typeof remote[key] === "object" && !Array.isArray(remote[key])
-          ? deepMerge(merged[key] || {}, remote[key])
-          : remote[key];
-    }
-  }
-  return merged;
-};
-
-async function main(options) {
+async function main() {
   if (busy) {
-    console.log("Main loop is busy, skipping this run.");
+    logger.info("Automation already running, skipping this run.");
     return;
   }
   busy = true;
 
-  let browser; // declare outside try so we can close it finally
+  let browser;
 
   try {
-    console.log("Checking configuration...");
-
     if (!fs.existsSync(configFilePath)) {
-      console.log("Configuration file not found at", configFilePath);
+      logger.error("Configuration file not found at", configFilePath);
       busy = false;
       return;
     }
 
     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-    console.log("Loaded configuration:", configuration);
+    logger.info("Loaded configuration:", configuration);
 
-    // Refresh user inputs
     await refreshUserInput();
 
-    // ---- 🔁 NEW LOOP STRUCTURE ----
-    // Extract all unique users across all sheets
+    // Extract all unique users
     const allUsers = {};
-
     for (const [sheetId, sheetData] of Object.entries(userInputStore)) {
       for (const creds of sheetData.inputs || []) {
         const key = creds.userId || creds.username;
@@ -154,17 +83,17 @@ async function main(options) {
       }
     }
 
-    // For each user -> open browser once -> run all sheets
+    // ----- Labeled loop for sheets -----
     for (const [userKey, creds] of Object.entries(allUsers)) {
-      console.log(`\n=== Starting all sheets for user: ${userKey} ===`);
+      logger.info(`\n=== Starting all sheets for user: ${userKey} ===`);
 
       const { browser: userBrowser, page } = await launchBrowser();
-      browser = userBrowser; // assign so we can close later if crash happens
+      browser = userBrowser;
 
-      for (const sheet of configuration.action_sheets || []) {
-        const sheetPath = path.join(actionSheetsDir, sheet.name + ".json");
+      outerSheetLoop: for (const sheet of configuration.action_sheets || []) {
+        const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
         if (!fs.existsSync(sheetPath)) {
-          console.log(`Action sheet not found: ${sheetPath}`);
+          logger.warn(`Action sheet not found: ${sheetPath}`);
           continue;
         }
 
@@ -199,51 +128,55 @@ async function main(options) {
         }
 
         console.log(`➡️ Running sheet ${sheet.name} for ${userKey}`);
-        configManager.setCurrentRunInputs(sheet.id, options.inputs);
+        configManager.setCurrentRunInputs(sheet.id, creds);
 
-        try {
-          const success = await runWorkflow(
-            sheet.id,
-            actionSheet,
-            configuration,
-            page
-          );
-          if (!success) {
-            console.log(
-              `❌ Sheet ${sheet.name} failed for ${userKey}, skipping to next sheet.`
+          try {
+            const success = await runWorkflow(
+              sheet.id,
+              actionSheet,
+              configuration,
+              page
             );
-            break;
+            if (!success) {
+              logger.error(`Sheet ${sheet.name}${
+                  position ? ` at ${position}` : ""
+                } failed for ${userKey}, stopping all sheets for this user.`);
+              break outerSheetLoop; // <--- STOP all sheets for this user
+            }
+
+            logger.info(`✅ Finished ${sheet.name}${
+              position ? ` at ${position}` : ""
+            } for ${userKey}`);
+          } catch (err) {
+            logger.error(
+              `Error in ${sheet.name}${
+                position ? ` at ${position}` : ""
+              } for ${userKey}:`,
+              err.message
+            );
+            break outerSheetLoop;
           }
-          console.log(`✅ Finished sheet ${sheet.name} for ${userKey}`);
-        } catch (err) {
-          console.error(
-            `Error in sheet ${sheet.name} for ${userKey}:`,
-            err.message
-          );
         }
       }
 
-      console.log(`Closing browser for ${userKey}`);
       await userBrowser.close();
       browser = null;
-      console.log(`=== Completed all sheets for ${userKey} ===`);
+      logger.info(`=== Completed all sheets for ${userKey} ===`);
     }
-
   } catch (err) {
-    console.error("Error in main:", err.message);
+    logger.error("Error in main:", err.message);
   } finally {
     if (browser) {
-      console.log("Closing leftover browser...");
+      logger.info("Closing leftover browser...");
       await browser.close();
     }
     busy = false;
   }
 }
 
-
-async function start(options) {
+async function start() {
   console.log("Automation started...");
-  await main(options);
+  await main();
   console.log("Automation finished. Exiting...");
   process.exit(0);
 }

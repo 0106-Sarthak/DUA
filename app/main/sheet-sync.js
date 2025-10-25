@@ -1,26 +1,28 @@
 // sheet-sync.js
-const fs = require('fs');
-const path = require('path');
-const https = require('https');
-const http = require('http');
-const { getLatestSheetLinks } = require('../services/db');
+const fs = require("fs");
+const path = require("path");
+const https = require("https");
+const http = require("http");
+const { getLatestSheetLinks } = require("../services/db");
 
 async function downloadFile(url, dest) {
   const file = fs.createWriteStream(dest);
   return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : http;
-    protocol.get(url, (response) => {
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to get '${url}' (${response.statusCode})`));
-        return;
-      }
-      response.pipe(file);
-      file.on('finish', () => {
-        file.close(resolve);
+    const protocol = url.startsWith("https") ? https : http;
+    protocol
+      .get(url, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to get '${url}' (${response.statusCode})`));
+          return;
+        }
+        response.pipe(file);
+        file.on("finish", () => {
+          file.close(resolve);
+        });
+      })
+      .on("error", (err) => {
+        fs.unlink(dest, () => reject(err));
       });
-    }).on('error', (err) => {
-      fs.unlink(dest, () => reject(err));
-    });
   });
 }
 
@@ -37,7 +39,7 @@ async function run() {
     const { id, action_sheet_url, url: site_url } = latestSheet;
     console.log(`Found latest sheet: ${id}`);
 
-    const sheetsDir = path.join(__dirname, '..', 'userData', 'action-sheets');
+    const sheetsDir = path.join(__dirname, "..", "userData", "action-sheets");
     console.log("Sheets Directory:", sheetsDir);
     if (!fs.existsSync(sheetsDir)) {
       fs.mkdirSync(sheetsDir, { recursive: true });
@@ -49,7 +51,7 @@ async function run() {
     console.log("Download complete.");
 
     // Read the downloaded file and update it
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = fs.readFileSync(filePath, "utf8");
     console.log("content", content);
     let json;
     try {
@@ -64,7 +66,7 @@ async function run() {
     if (json.actions) {
       for (const key in json.actions) {
         const action = json.actions[key];
-        if (action.type === 'launch' && action.site !== site_url) {
+        if (action.type === "launch" && action.site !== site_url) {
           console.log(`Updating site URL in action ${key}`);
           action.site = site_url;
           updated = true;
@@ -73,7 +75,7 @@ async function run() {
     }
 
     if (updated) {
-      fs.writeFileSync(filePath, JSON.stringify(json, null, 2), 'utf8');
+      fs.writeFileSync(filePath, JSON.stringify(json, null, 2), "utf8");
       console.log("Action sheet updated with new site URLs.");
     } else {
       console.log("No updates needed for site URLs.");
@@ -84,5 +86,5 @@ async function run() {
 }
 
 module.exports = {
-  run
+  run,
 };

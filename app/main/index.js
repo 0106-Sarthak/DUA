@@ -12,7 +12,12 @@ function streamLogFile() {
   const logDir = path.join("C:\\DuaReports", "logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 
-  const logFile = path.join(logDir, `${new Date().toISOString().slice(0, 10)}.log`);
+  const logFile = path.join(
+    logDir,
+    `${new Date().toISOString().slice(0, 10)}.log`
+  );
+
+  // Ensure file exists
   if (!fs.existsSync(logFile)) fs.writeFileSync(logFile, "");
 
   const cmd = `start powershell -NoExit -Command "Get-Content -Path '${logFile}' -Wait"`;
@@ -39,7 +44,7 @@ app.whenReady().then(async () => {
   setupIPC();
   streamLogFile();
   generateUserJson();
-
+  // automation.start(config);
   const config = configManager.getConfig();
   const userInputs = configManager.getUserInputs();
 
