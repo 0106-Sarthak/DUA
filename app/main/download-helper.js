@@ -12,20 +12,45 @@ async function waitUntilDownload(
   return new Promise((resolve, reject) => {
     const guids = {};
 
+    // Log when a download begins
     session.on("Browser.downloadWillBegin", (event) => {
       guids[event.guid] = fileName + event.suggestedFilename;
+      logger.info(`[DOWNLOAD START] GUID=${event.guid}`);
+      logger.info(`[DOWNLOAD START] Suggested filename: ${event.suggestedFilename}`);
+      logger.info(`[DOWNLOAD START] Target file name will be: ${guids[event.guid]}`);
     });
 
+    // Track download progress
     session.on("Browser.downloadProgress", (e) => {
+      logger.info(`[DOWNLOAD PROGRESS] GUID=${e.guid}, State=${e.state}`);
+
+      // Try reading directory contents for debugging
+      try {
+        const files = fs.readdirSync(downloadPath);
+        logger.info(`[DOWNLOAD DEBUG] Current files in download dir: ${files.join(", ")}`);
+      } catch (err) {
+        logger.warn(`[DOWNLOAD DEBUG] Could not list download dir: ${err.message}`);
+      }
+
       if (e.state === "completed") {
+        logger.info(`[DOWNLOAD COMPLETED] GUID=${e.guid}`);
+
         try {
           // Extract dealer & activePosition safely
           const dealerRaw = creds.Dealer_name || creds.dealerName || "";
-          const locationRaw = creds.activePosition || "";
+          const positionRaw = creds.activePosition || "";
 
           // Sanitize for folder names
-          const dealerSafe = dealerRaw.toString().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
-          const positionSafe = positionRaw.toString().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
+          const dealerSafe = dealerRaw
+            .toString()
+            .trim()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "_");
+          const positionSafe = positionRaw
+            .toString()
+            .trim()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "_");
 
           // Build directory path
           let targetDir = downloadPath;
@@ -33,22 +58,37 @@ async function waitUntilDownload(
           if (positionSafe) targetDir = path.join(targetDir, positionSafe);
 
           fs.mkdirSync(targetDir, { recursive: true });
+          logger.info(`[DOWNLOAD PATH] Target directory created: ${targetDir}`);
 
-          const sourcePath = path.resolve(downloadPath, e.guid);
+          // Possible file names (Chrome may use GUID or suggestedFilename)
+          const guidPath = path.resolve(downloadPath, e.guid);
+          const suggestedPath = path.resolve(downloadPath, guids[e.guid]);
+          let sourcePath = null;
+
+          if (fs.existsSync(guidPath)) {
+            sourcePath = guidPath;
+            logger.info(`[DOWNLOAD FOUND] Using GUID file: ${guidPath}`);
+          } else if (fs.existsSync(suggestedPath)) {
+            sourcePath = suggestedPath;
+            logger.info(`[DOWNLOAD FOUND] Using suggested filename: ${suggestedPath}`);
+          } else {
+            logger.error(`[DOWNLOAD ERROR] File not found for GUID=${e.guid}`);
+            return reject(new Error("Download completed but file not found"));
+          }
+
           const destPath = path.resolve(targetDir, guids[e.guid]);
-
-          logger.info(`Dealer: ${dealerSafe}`);
-          logger.info(`Position: ${positionSafe}`);
-          logger.info(`Target Directory: ${targetDir}`);
+          logger.info(`[DOWNLOAD MOVE] Moving file to: ${destPath}`);
 
           fs.renameSync(sourcePath, destPath);
-          logger.info("✅ Download moved to:", destPath);
+          logger.info(`✅ Download moved successfully to: ${destPath}`);
 
           resolve(destPath);
         } catch (err) {
+          logger.error(`[DOWNLOAD ERROR] ${err.stack}`);
           reject(err);
         }
       } else if (e.state === "canceled") {
+        logger.warn(`[DOWNLOAD CANCELED] GUID=${e.guid}`);
         reject(new Error("Download canceled"));
       }
     });
@@ -56,7 +96,6 @@ async function waitUntilDownload(
 }
 
 // --- Exports ---
-
 module.exports = {
   waitUntilDownload,
 };
