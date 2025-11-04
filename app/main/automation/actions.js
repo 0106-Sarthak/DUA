@@ -268,6 +268,29 @@ async function runAction(sheetId, page, action) {
         await page.keyboard.press(action.key, { delay: 100 });
       }
       break;
+    
+    case "select":
+      try {
+        logger.debug(`Waiting for select element: ${action.selector}`);
+        await page.waitForSelector(action.selector, {
+          visible: true,
+          timeout: 60000,
+        });
+        await page.select(action.selector, action.value);
+        // Optionally trigger change event if required by the page
+        await page.evaluate((selector) => {
+          const el = document.querySelector(selector);
+          if (el) {
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }, action.selector);
+        logger.debug(
+          `[DEBUG] Select action completed. Selected value: ${action.value}`
+        );
+      } catch (err) {
+        logger.error("[DEBUG] Error executing select action:", err);
+      }
+      break;
 
     default:
       logger.debug(`[DEBUG] Unknown action type: ${action.type}`);
