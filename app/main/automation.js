@@ -12,6 +12,7 @@ const logger = require("./logger");
 // Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 console.log("Chrome executable path:", chromePath);
+logger.info("Chrome executable path:", chromePath)
 
 // Base directories
 const BASE_DIR = "C:\\DuaReports";

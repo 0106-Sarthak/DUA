@@ -10,7 +10,7 @@ async function launchBrowser() {
     defaultViewport: null,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
   });
-
+  logger.info("launched Chrome using this path", chromePath);
   const page = await browser.newPage();
 
   await page.setCacheEnabled(false);
