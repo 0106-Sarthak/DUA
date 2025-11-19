@@ -99,12 +99,14 @@ async function main() {
         }
 
         const actionSheet = forget(sheetPath);
-        const isSheet2 = sheet.name === "sheet-2";
+        // const isSheet2 = sheet.name === "sheet-2";
+
+        const shouldLoop = sheet.multi_postion === true;
 
         // Determine loop array: for sheet-2, iterate over activePositions
         let loopArray = [null];
         if (
-          isSheet2 &&
+          shouldLoop &&
           creds.activePositions &&
           creds.activePositions.length > 0
         ) {
