@@ -83,11 +83,12 @@ async function main() {
       }
     }
     
-    const runSheets = [2, 5];
+    // const runSheets = [0, 2, 5];
+    
 
     for (const [userKey, creds] of Object.entries(allUsers)) {
       logger.info(`=== Starting run for ${userKey} ===`);
-
+      const runSheets = creds.runSheets;
       const { browser: userBrowser, page } = await launchBrowser();
       browser = userBrowser;
 
