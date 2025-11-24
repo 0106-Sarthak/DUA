@@ -15,26 +15,18 @@ async function waitUntilDownload(
     // Log when a download begins
     session.on("Browser.downloadWillBegin", (event) => {
       guids[event.guid] = fileName + event.suggestedFilename;
-      logger.info(`[DOWNLOAD START] GUID=${event.guid}`);
-      logger.info(`[DOWNLOAD START] Suggested filename: ${event.suggestedFilename}`);
-      logger.info(`[DOWNLOAD START] Target file name will be: ${guids[event.guid]}`);
     });
 
     // Track download progress
     session.on("Browser.downloadProgress", (e) => {
-      logger.info(`[DOWNLOAD PROGRESS] GUID=${e.guid}, State=${e.state}`);
-
       // Try reading directory contents for debugging
       try {
         const files = fs.readdirSync(downloadPath);
-        logger.info(`[DOWNLOAD DEBUG] Current files in download dir: ${files.join(", ")}`);
       } catch (err) {
         logger.warn(`[DOWNLOAD DEBUG] Could not list download dir: ${err.message}`);
       }
 
       if (e.state === "completed") {
-        logger.info(`[DOWNLOAD COMPLETED] GUID=${e.guid}`);
-
         try {
           // Extract dealer & activePosition safely
           const dealerRaw = creds.Dealer_name || creds.dealerName || "";
@@ -58,7 +50,6 @@ async function waitUntilDownload(
           if (positionSafe) targetDir = path.join(targetDir, positionSafe);
 
           fs.mkdirSync(targetDir, { recursive: true });
-          logger.info(`[DOWNLOAD PATH] Target directory created: ${targetDir}`);
 
           // Possible file names (Chrome may use GUID or suggestedFilename)
           const guidPath = path.resolve(downloadPath, e.guid);
@@ -67,10 +58,10 @@ async function waitUntilDownload(
 
           if (fs.existsSync(guidPath)) {
             sourcePath = guidPath;
-            logger.info(`[DOWNLOAD FOUND] Using GUID file: ${guidPath}`);
+            
           } else if (fs.existsSync(suggestedPath)) {
             sourcePath = suggestedPath;
-            logger.info(`[DOWNLOAD FOUND] Using suggested filename: ${suggestedPath}`);
+            
           } else {
             logger.error(`[DOWNLOAD ERROR] File not found for GUID=${e.guid}`);
             return reject(new Error("Download completed but file not found"));
@@ -80,7 +71,7 @@ async function waitUntilDownload(
           logger.info(`[DOWNLOAD MOVE] Moving file to: ${destPath}`);
 
           fs.renameSync(sourcePath, destPath);
-          logger.info(`✅ Download moved successfully to: ${destPath}`);
+          
 
           resolve(destPath);
         } catch (err) {

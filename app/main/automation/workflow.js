@@ -3,7 +3,6 @@ const { runActions } = require("./actions");
 const logger = require("../logger");
 
 async function runWorkflow(sheetId, sheet, configuration, page) {
-  logger.debug("=== Starting workflow for sheetId:", sheetId, "===");
 
   try {
     if (!page) throw new Error("Page not provided to workflow");
@@ -12,19 +11,14 @@ async function runWorkflow(sheetId, sheet, configuration, page) {
       logger.error("sheet.actions is missing or not an array");
       return false;
     }
-    logger.debug("Total actions to execute:", sheet.actions.length);
     // Iterate over all actions and execute via switch
     for (const action of sheet.actions) {
-      logger.debug("Executing action:", action.type);
-
       switch (action.type) {
         case "launch":
-          logger.debug("Launching site:", action.site);
           await runActions(sheetId, page, [action]);
           break;
 
         case "login":
-          logger.debug("Executing login");
           const loginFailed = await doLogin(sheetId, page, action);
           if (loginFailed) {
             logger.error("Login failed, stopping workflow");
@@ -33,7 +27,6 @@ async function runWorkflow(sheetId, sheet, configuration, page) {
           break;
 
         default:
-          logger.debug("Executing other action:", action.type);
           await runActions(sheetId, page, [action]);
       }
     }

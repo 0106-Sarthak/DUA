@@ -10,7 +10,6 @@ async function launchBrowser() {
     defaultViewport: null,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--start-maximized"],
   });
-  logger.info("launched Chrome using this path", chromePath);
   const page = await browser.newPage();
 
   await page.setCacheEnabled(false);
@@ -18,7 +17,6 @@ async function launchBrowser() {
   await page.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0 Safari/537.36"
   );
-  logger.info("Browser launched with user agent set.");
   return { browser, page };
 }
 

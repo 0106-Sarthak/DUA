@@ -17,7 +17,6 @@ function getDynamicDate(monthsAgo) {
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const year = today.getFullYear();
   const result = `>=${day}/${month}/${year}`;
-  logger.debug(`getDynamicDate result: ${result}`);
   return result;
 }
 
@@ -44,7 +43,6 @@ async function tryOutfilters(page, action) {
     }, action.selector);
 
     if (found) {
-      logger.debug(`Element found and clicked on page ${i + 1}`);
       return true;
     }
 
@@ -106,7 +104,6 @@ async function runAction(sheetId, page, action) {
           timeout: 60000,
         });
       } catch (err) {
-        logger.debug(`Navigation failed: ${err.message}`);
         try {
           logger.debug("Attempting to reload the page...");
           await page.reload({
@@ -130,7 +127,7 @@ async function runAction(sheetId, page, action) {
           "{{searchText}}",
           action.searchText
         );
-        logger.debug(`Waiting for XPath: ${action.selector}`);
+        
         try {
           await page.waitForFunction(
             (xpath) => {
@@ -146,7 +143,7 @@ async function runAction(sheetId, page, action) {
             { timeout: 60000 },
             action.selector
           );
-          logger.debug("XPath element found, executing click logic.");
+          
 
           await page.evaluate((searchText) => {
             const links = Array.from(document.querySelectorAll("a")).filter(
@@ -202,7 +199,6 @@ async function runAction(sheetId, page, action) {
           }
           await page.click(action.selector);
           if (action.initiatesDownload) {
-            logger.debug("Setting up download behavior...");
 
             const client = await page.createCDPSession();
             await client.send("Browser.setDownloadBehavior", {
@@ -229,7 +225,6 @@ async function runAction(sheetId, page, action) {
           logger.error("Error clicking element for selector:", err);
         }
       }
-      logger.debug("[DEBUG] Click action completed");
       break;
 
     case "type":
@@ -237,14 +232,12 @@ async function runAction(sheetId, page, action) {
 
       if (value === "dynamic-date") {
         value = getDynamicDate(action.month);
-        logger.debug("[DEBUG] Using dynamic date:", value);
       }
       await page.waitForSelector(action.selector, {
         visible: true,
         timeout: 60000,
       });
       await page.type(action.selector, value, { delay: 100 });
-      logger.debug("[DEBUG] Type action completed with value:", value);
       break;
 
     case "logout":
@@ -271,7 +264,6 @@ async function runAction(sheetId, page, action) {
     
     case "select":
       try {
-        logger.debug(`Waiting for select element: ${action.selector}`);
         await page.waitForSelector(action.selector, {
           visible: true,
           timeout: 60000,
@@ -284,9 +276,6 @@ async function runAction(sheetId, page, action) {
             el.dispatchEvent(new Event("change", { bubbles: true }));
           }
         }, action.selector);
-        logger.debug(
-          `[DEBUG] Select action completed. Selected value: ${action.value}`
-        );
       } catch (err) {
         logger.error("[DEBUG] Error executing select action:", err);
       }
@@ -303,7 +292,7 @@ async function runActions(sheetId, page, actions) {
   for (const action of actions) {
     await runAction(sheetId, page, action);
   }
-  logger.debug("All actions completed for sheetId:", sheetId);
+  
 }
 
 module.exports = { runActions };

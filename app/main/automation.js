@@ -12,7 +12,7 @@ const logger = require("./logger");
 // Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 console.log("Chrome executable path:", chromePath);
-logger.info("Chrome executable path:", chromePath)
+logger.info("Chrome executable path:", chromePath);
 
 // Base directories
 const BASE_DIR = "C:\\DuaReports";
@@ -71,7 +71,6 @@ async function main() {
     }
 
     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-    logger.info("Loaded configuration:", configuration);
 
     await refreshUserInput();
 
@@ -83,81 +82,112 @@ async function main() {
         if (!allUsers[key]) allUsers[key] = creds;
       }
     }
+    
+    const runSheets = [2, 5];
 
-    // ----- Labeled loop for sheets -----
     for (const [userKey, creds] of Object.entries(allUsers)) {
-      logger.info(`\n=== Starting all sheets for user: ${userKey} ===`);
+      logger.info(`=== Starting run for ${userKey} ===`);
 
       const { browser: userBrowser, page } = await launchBrowser();
       browser = userBrowser;
 
-      outerSheetLoop: for (const sheet of configuration.action_sheets || []) {
+      const positions =
+        creds.activePositions?.length > 0 ? creds.activePositions : [null];
+
+      const sheets = configuration.action_sheets;
+
+      const loginSheet = sheets[0]; // sheet-1
+      const logoutSheet = sheets[sheets.length - 1]; // sheet-N (last)
+
+      // ---------------------------
+      // LOGIN ONCE
+      // ---------------------------
+      {
+        const sheet = loginSheet;
         const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
-        if (!fs.existsSync(sheetPath)) {
-          logger.warn(`Action sheet not found: ${sheetPath}`);
-          continue;
-        }
 
         const actionSheet = forget(sheetPath);
-        // const isSheet2 = sheet.name === "sheet-2";
+        configManager.setCurrentRunInputs(sheet.id, creds);
 
-        const shouldLoop = sheet.multi_postion === true;
+        logger.info(`LOGIN: Running ${sheet.name}`);
 
-        // Determine loop array: for sheet-2, iterate over activePositions
-        let loopArray = [null];
-        if (
-          shouldLoop &&
-          creds.activePositions &&
-          creds.activePositions.length > 0
-        ) {
-          loopArray = creds.activePositions;
+        const success = await runWorkflow(
+          sheet.id,
+          actionSheet,
+          configuration,
+          page
+        );
+        if (!success) {
+          logger.error(`Login failed`);
+          await userBrowser.close();
+          continue;
         }
+      }
 
-        for (const position of loopArray) {
-          if (position) {
-            
-            configManager.setCurrentRunInputs(sheet.id, {
-              ...creds,
-              activePosition: position,
-            });
-            logger.info(`🔁 Running ${sheet.name} for user ${userKey} at position ${position}`);
-          } else {
-            logger.info(`🔁 Running ${sheet.name} for user ${userKey}`);
-            configManager.setCurrentRunInputs(sheet.id, creds);
+      // ---------------------------
+      // RUN REPORTS FOR EACH POSITION
+      // ---------------------------
+      for (const position of positions) {
+        logger.info(`\nPosition: ${position}`);
+
+        for (let i = 1; i < sheets.length - 1; i++) {
+          const sheet = sheets[i];
+
+          const sheetNumber = sheet.number;
+
+          // skip if sheet.number not in runSheets
+          if (
+            sheetNumber !== undefined &&
+            runSheets.length > 0 &&
+            !runSheets.includes(sheetNumber)
+          ) {
+            continue;
           }
 
-          try {
-            const success = await runWorkflow(
-              sheet.id,
-              actionSheet,
-              configuration,
-              page
-            );
-            if (!success) {
-              logger.error(`Sheet ${sheet.name}${
-                  position ? ` at ${position}` : ""
-                } failed for ${userKey}, stopping all sheets for this user.`);
-              break outerSheetLoop; // <--- STOP all sheets for this user
-            }
+          const pathToSheet = path.join(
+            ACTION_SHEETS_DIR,
+            sheet.name + ".json"
+          );
+          const actionSheet = forget(pathToSheet);
 
-            logger.info(`✅ Finished ${sheet.name}${
-              position ? ` at ${position}` : ""
-            } for ${userKey}`);
-          } catch (err) {
-            logger.error(
-              `Error in ${sheet.name}${
-                position ? ` at ${position}` : ""
-              } for ${userKey}:`,
-              err.message
-            );
-            break outerSheetLoop;
+          configManager.setCurrentRunInputs(sheet.id, {
+            ...creds,
+            activePosition: position,
+          });
+
+          logger.info(`Running ${sheet.name} @ ${position}`);
+
+          const success = await runWorkflow(
+            sheet.id,
+            actionSheet,
+            configuration,
+            page
+          );
+
+          if (!success) {
+            logger.error(`Failed at ${sheet.name}`);
+            break;
           }
         }
       }
 
+      // ---------------------------
+      // LOGOUT ONCE
+      // ---------------------------
+      {
+        const sheet = logoutSheet;
+        const pathToSheet = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
+        const actionSheet = forget(pathToSheet);
+
+        configManager.setCurrentRunInputs(sheet.id, creds);
+
+        logger.info(`LOGOUT: Running ${sheet.name}`);
+
+        await runWorkflow(sheet.id, actionSheet, configuration, page);
+      }
+
       await userBrowser.close();
       browser = null;
-      logger.info(`=== Completed all sheets for ${userKey} ===`);
     }
   } catch (err) {
     logger.error("Error in main:", err.message);
