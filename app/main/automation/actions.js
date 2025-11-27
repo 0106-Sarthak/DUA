@@ -292,7 +292,6 @@ async function runActions(sheetId, page, actions) {
   for (const action of actions) {
     await runAction(sheetId, page, action);
   }
-  
 }
 
 module.exports = { runActions };

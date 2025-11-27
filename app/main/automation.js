@@ -165,9 +165,10 @@ async function main() {
             page
           );
 
+          // in case of any errors continue to next sheet
           if (!success) {
             logger.error(`Failed at ${sheet.name}`);
-            break;
+            continue;
           }
         }
       }

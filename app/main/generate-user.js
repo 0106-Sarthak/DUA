@@ -8,6 +8,7 @@ const CONFIG_DIR = path.join("C:", "DuaReports", "config");
 const EXCEL_FILE = path.join(CONFIG_DIR, "user-input.xlsx");
 const JSON_FILE = path.join(CONFIG_DIR, "user-input.json");
 
+// function to create the user-input json from the user-input excel file
 function generateUserJson() {
   try {
     if (!fs.existsSync(EXCEL_FILE)) {
@@ -30,6 +31,7 @@ function generateUserJson() {
         return;
       }
 
+      // read only rows which have these fields
       const validRows = sheetData.filter(
         row => row.Dealer && row.ID && row.Password && row["Active Postion"] && row.Reports
       );
@@ -37,6 +39,7 @@ function generateUserJson() {
       // Group by Dealer, ID, Password
       const groupedData = {};
 
+      // create the user opbject from the excel
       validRows.forEach(row => {
         const key = `${row.Dealer}_${row.ID}_${row.Password}`;
         if (!groupedData[key]) {
@@ -49,8 +52,10 @@ function generateUserJson() {
           };
         }
 
+        // group the data for all the active positions
         groupedData[key].activePositions.push(row["Active Postion"]);
 
+        // group and create the runSheets array from excel to run custom sheets
         if (row.Reports) {
           const nums = row.Reports
             .toString()
@@ -58,6 +63,7 @@ function generateUserJson() {
             .map(n => parseInt(n.trim(), 10))
             .filter(n => !isNaN(n));
 
+            // add 0 number in every case as 0 indexed sheet is change position sheet
             if (!nums.includes(0)) {
               nums.unshift(0);
             }
