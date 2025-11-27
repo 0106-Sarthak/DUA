@@ -4,37 +4,107 @@
   <meta charset="UTF-8" />
   <title>DUA Automation Setup</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    label { font-weight: bold; display: block; margin-top: 10px; }
-    input { margin-bottom: 10px; width: 300px; padding: 5px; }
-    button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    button:hover { background-color: #0056b3; }
-    #edit-button { background-color: #28a745; }
-    #edit-button:hover { background-color: #218838; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #sheet-options {
+      margin-top: 10px;
+      padding-left: 10px;
+    }
+
+    #sheet-options label {
+      font-weight: normal;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    #save-button {
+      background-color: #007bff;
+      color: white;
+      margin-right: 10px;
+    }
+
+    #save-button:hover {
+      background-color: #0056b3;
+    }
+
+    #edit-button {
+      background-color: #28a745;
+      color: white;
+    }
+
+    #edit-button:hover {
+      background-color: #218838;
+    }
   </style>
 </head>
 <body>
   <h1>DUA Automation Setup</h1>
 
   <form id="setup-form">
-    <label>User ID:</label>
+    <label for="userId">User ID:</label>
     <input type="text" id="userId" placeholder="Enter your User ID" disabled required>
 
-    <label>Password:</label>
+    <label for="password">Password:</label>
     <input type="password" id="password" placeholder="Enter your Password" disabled required>
 
-    <label>Insight ID:</label>
-    <input type="text" id="insightId" placeholder="Enter Insight ID" disabled required>
+    <label for="actPositions">Select Positions:</label>
+    <input type="text" id="actPositions" placeholder="Enter Active positions condition" disabled>
 
-    <label>Insight Password:</label>
-    <input type="password" id="insightPassword" placeholder="Enter Insight Password" disabled required>
+    <label>Select Sheets to Run:</label>
+    <div id="sheet-options">
+      <label><input type="checkbox" value="1"> 1 - Line Items both Reports</label>
+      <label><input type="checkbox" value="2"> 2 - MIS Spares both Reports</label>
+      <label><input type="checkbox" value="3"> 3 - OTC Sales Invoice Report</label>
+      <label><input type="checkbox" value="4"> 4 - Channel Partner Purchase Report</label>
+      <label><input type="checkbox" value="5"> 5 - Job Card Invoice Report</label>
+      <label><input type="checkbox" value="6"> 6 - All Service Invoice Report</label>
+    </div>
 
-    <label>Quantity Condition:</label>
-    <input type="text" id="qtyCondition" placeholder="Enter quantity condition" disabled>
-
-    <button type="submit" id="save-button" style="display: none;">Save Credentials</button>
-    <button type="button" id="edit-button" style="display: none;">Edit Credentials</button>
+    <div style="margin-top: 20px;">
+      <button type="submit" id="save-button" style="display: none;">Save Credentials</button>
+      <button type="button" id="edit-button" style="display: none;">Edit Credentials</button>
+      <button type="button" id="run-button" style="background-color:#17a2b8; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; margin-left:10px;">Run Automation</button>
+    </div>
   </form>
 
   <script src="renderer.js"></script>

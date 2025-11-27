@@ -2,6 +2,26 @@ const fs = require("fs");
 const path = require("path");
 const logger = require("./logger");
 
+const defaultConfig = {
+  user_id: "testuser",
+  host: "https://testhost.com",
+  endpoints: {
+    config: "/config/{{userId}}",
+    report_upload: "/report/upload/{{userId}}"
+  },
+  action_sheets: [
+    { id: "test-sheet", name: "sheet-1", config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "changePosition", name: "changePosition", number: 0, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "lineItems", name: "lineItems", number: 1, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "MISSpares", name: "MISSpares", number: 2, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "OTCSales", name: "OTCSales", number: 3, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "ChannelPartnerPurchase", name: "ChannelPartnerPurchase", number: 4, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "JobCardInvoice", name: "JobCardInvoice", number: 5, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "allServiceInvoice", name: "allServiceInvoice", number: 6, multi_position: true, config: { runtimes: { every_hour: "* * * * *" } } },
+    { id: "sheet-3", name: "sheet-3", config: { runtimes: { every_hour: "* * * * *" } } }
+  ]
+};
+
 const BASE_DIR = "C:\\DuaReports";
 const CONFIG_DIR = path.join(BASE_DIR, "config");
 const REPORTS_DIR = path.join(BASE_DIR, "reports");
@@ -51,16 +71,51 @@ function ensureFile(filePath, defaultData = {}) {
 }
 
 // CONFIG FUNCTIONS
+// function getConfig() {
+//   logger.info("Getting config from:", configFilePath);
+//   ensureFile(configFilePath, {});
+//   try {
+//     const data = fs.readFileSync(configFilePath, "utf8");
+//     logger.debug("Config file data:", data);
+//     return JSON.parse(data);
+//   } catch (err) {
+//     logger.error("Error reading config.json:", err);
+//     return {};
+//   }
+// }
+
 function getConfig() {
   logger.info("Getting config from:", configFilePath);
-  ensureFile(configFilePath, {});
+
+  // If config file missing -> write default config (do not overwrite existing)
+  if (!fs.existsSync(configFilePath)) {
+    try {
+      fs.mkdirSync(path.dirname(configFilePath), { recursive: true });
+      fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2));
+      logger.info("Default config created at:", configFilePath);
+      return JSON.parse(JSON.stringify(defaultConfig));
+    } catch (err) {
+      logger.error("Error creating default config:", err);
+      return {};
+    }
+  }
+
+  // If exists, read and return (catch parse errors)
   try {
     const data = fs.readFileSync(configFilePath, "utf8");
     logger.debug("Config file data:", data);
-    return JSON.parse(data);
+    return JSON.parse(data || "{}");
   } catch (err) {
-    logger.error("Error reading config.json:", err);
-    return {};
+    logger.error("Error reading config.json (will recreate default):", err);
+    // If corrupted, recreate default (safer than leaving broken file)
+    try {
+      fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2));
+      logger.info("Recreated default config due to read error.");
+      return JSON.parse(JSON.stringify(defaultConfig));
+    } catch (err2) {
+      logger.error("Failed to recreate default config:", err2);
+      return {};
+    }
   }
 }
 
@@ -106,7 +161,7 @@ function saveUserInputs(newInputs) {
   }
 }
 
-let currentRunInputs = {}; // stores the creds for the current automation run
+let currentRunInputs = {};
 
 function setCurrentRunInputs(sheetId, creds) {
   currentRunInputs[sheetId] = creds;

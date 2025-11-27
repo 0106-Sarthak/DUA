@@ -2,6 +2,7 @@ const { ipcMain } = require("electron");
 const configManager = require("./config-manager");
 const automation = require("./automation");
 const logger = require("./logger");
+const runAllSheets = require("./runAllSheets");
 
 const setupIPC = () => {
   logger.info("Setting up IPC handlers...");
@@ -20,7 +21,7 @@ const setupIPC = () => {
 
     // Start automation after first-time config save
     logger.info("Starting automation after config save...");
-    automation.start();
+    // automation.start();
     return result;
   });
 
@@ -32,23 +33,31 @@ const setupIPC = () => {
     return inputs;
   });
 
-  ipcMain.handle("save-user-inputs", (_, newInputs) => {
+  ipcMain.handle("save-user-inputs", async (_, newInputs) => {
     logger.info("IPC: save-user-inputs called with:", newInputs);
     const result = configManager.saveUserInputs(newInputs);
     logger.info("User inputs save result:", result);
 
     const config = configManager.getConfig();
-    if (
-      config &&
-      config.user_id &&
-      config.verified &&
-      Object.keys(newInputs).length > 0
-    ) {
-      logger.info("Starting automation after user inputs set...");
-      automation.start(config);
-    }
+
+    // Always start automation when user saves credentials
+    logger.info("Starting automation after user inputs saved...");
+    // automation.start(config);
+
+    await runAllSheets(config, configManager.getUserInputs());
 
     return result;
+  });
+
+  ipcMain.handle("run-automation", async (_, sheetId, input) => {
+    try {
+      const config = configManager.getConfig();
+      await runAllSheets(config, configManager.getUserInputs());
+      return result;
+    } catch (err) {
+      logger.error("Automation failed:", err);
+      throw err;
+    }
   });
 
   logger.info("IPC handlers setup complete.");
