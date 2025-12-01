@@ -56,7 +56,7 @@ let busy = false;
 
 async function main() {
   if (busy) {
-    logger.info("Automation already running, skipping this run.");
+    logger.info("Automation already running, skipping.");
     return;
   }
   busy = true;
@@ -65,7 +65,7 @@ async function main() {
 
   try {
     if (!fs.existsSync(configFilePath)) {
-      logger.error("Configuration file not found at", configFilePath);
+      logger.error("Configuration file not found:", configFilePath);
       busy = false;
       return;
     }
@@ -78,85 +78,67 @@ async function main() {
     const allUsers = {};
     for (const [sheetId, sheetData] of Object.entries(userInputStore)) {
       for (const creds of sheetData.inputs || []) {
-        const key = creds.userId || creds.username;
+        const key = creds.userId;
         if (!allUsers[key]) allUsers[key] = creds;
       }
     }
-    
-    // const runSheets = [0, 2, 5];
-    
 
     for (const [userKey, creds] of Object.entries(allUsers)) {
       logger.info(`=== Starting run for ${userKey} ===`);
-      const runSheets = creds.runSheets;
+
       const { browser: userBrowser, page } = await launchBrowser();
       browser = userBrowser;
 
-      const positions =
-        creds.activePositions?.length > 0 ? creds.activePositions : [null];
-
       const sheets = configuration.action_sheets;
+      const loginSheet = sheets[0];
+      const logoutSheet = sheets[sheets.length - 1];
 
-      const loginSheet = sheets[0]; // sheet-1
-      const logoutSheet = sheets[sheets.length - 1]; // sheet-N (last)
-
-      // ---------------------------
-      // LOGIN ONCE
-      // ---------------------------
+      //
+      // ------------------------ LOGIN ONCE ------------------------
+      //
       {
-        const sheet = loginSheet;
-        const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
-
+        const sheetPath = path.join(ACTION_SHEETS_DIR, loginSheet.name + ".json");
         const actionSheet = forget(sheetPath);
-        configManager.setCurrentRunInputs(sheet.id, creds);
 
-        logger.info(`LOGIN: Running ${sheet.name}`);
+        configManager.setCurrentRunInputs(loginSheet.id, creds);
 
-        const success = await runWorkflow(
-          sheet.id,
-          actionSheet,
-          configuration,
-          page
-        );
+        logger.info(`LOGIN: Running ${loginSheet.name}`);
+        const success = await runWorkflow(loginSheet.id, actionSheet, configuration, page);
+
         if (!success) {
-          logger.error(`Login failed`);
+          logger.error("Login failed");
           await userBrowser.close();
           continue;
         }
       }
 
-      // ---------------------------
-      // RUN REPORTS FOR EACH POSITION
-      // ---------------------------
-      for (const position of positions) {
-        logger.info(`\nPosition: ${position}`);
+      //
+      // ------------------------ RUN SHEETS PER POSITION ------------------------
+      //
+      for (const posObj of creds.positions) {
+        const posName = posObj.position;
+        const posRunSheets = posObj.runSheets ?? [];
+
+        logger.info(`\nPosition: ${posName}`);
+        logger.info(`RunSheets for this position: ${JSON.stringify(posRunSheets)}`);
 
         for (let i = 1; i < sheets.length - 1; i++) {
           const sheet = sheets[i];
 
-          const sheetNumber = sheet.number;
-
-          // skip if sheet.number not in runSheets
-          if (
-            sheetNumber !== undefined &&
-            runSheets.length > 0 &&
-            !runSheets.includes(sheetNumber)
-          ) {
+          if (sheet.number !== undefined && !posRunSheets.includes(sheet.number)) {
+            logger.info(`Skipping sheet ${sheet.name} (${sheet.number})`);
             continue;
           }
 
-          const pathToSheet = path.join(
-            ACTION_SHEETS_DIR,
-            sheet.name + ".json"
-          );
-          const actionSheet = forget(pathToSheet);
+          const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
+          const actionSheet = forget(sheetPath);
 
           configManager.setCurrentRunInputs(sheet.id, {
             ...creds,
-            activePosition: position,
+            activePosition: posName
           });
 
-          logger.info(`Running ${sheet.name} @ ${position}`);
+          logger.info(`Running ${sheet.name} @ ${posName}`);
 
           const success = await runWorkflow(
             sheet.id,
@@ -165,7 +147,6 @@ async function main() {
             page
           );
 
-          // in case of any errors continue to next sheet
           if (!success) {
             logger.error(`Failed at ${sheet.name}`);
             continue;
@@ -173,19 +154,17 @@ async function main() {
         }
       }
 
-      // ---------------------------
-      // LOGOUT ONCE
-      // ---------------------------
+      //
+      // ------------------------ LOGOUT ONCE ------------------------
+      //
       {
-        const sheet = logoutSheet;
-        const pathToSheet = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
-        const actionSheet = forget(pathToSheet);
+        const sheetPath = path.join(ACTION_SHEETS_DIR, logoutSheet.name + ".json");
+        const actionSheet = forget(sheetPath);
 
-        configManager.setCurrentRunInputs(sheet.id, creds);
+        configManager.setCurrentRunInputs(logoutSheet.id, creds);
 
-        logger.info(`LOGOUT: Running ${sheet.name}`);
-
-        await runWorkflow(sheet.id, actionSheet, configuration, page);
+        logger.info(`LOGOUT: Running ${logoutSheet.name}`);
+        await runWorkflow(logoutSheet.id, actionSheet, configuration, page);
       }
 
       await userBrowser.close();
@@ -195,12 +174,12 @@ async function main() {
     logger.error("Error in main:", err.message);
   } finally {
     if (browser) {
-      logger.info("Closing leftover browser...");
       await browser.close();
     }
     busy = false;
   }
 }
+
 
 async function start() {
   logger.info("Automation started...");
