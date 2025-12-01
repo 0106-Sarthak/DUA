@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saveButton = document.getElementById("save-button");
   const runButton = document.getElementById("run-button");
 
-  const fields = ["userId", "password", "actPositions"].map((id) =>
+  const fields = ["dealerName", "userId", "password", "actPositions"].map((id) =>
     document.getElementById(id)
   );
   const sheetCheckboxes = Array.from(
@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const existing = existingArray[0] || {};
 
     // Pre-fill the form
+    document.getElementById("dealerName").value = existing.dealerName || "";
     document.getElementById("userId").value = existing.userId || "";
     document.getElementById("password").value = existing.password || "";
     document.getElementById("actPositions").value = (
@@ -62,11 +63,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const dealerName = document.getElementById("dealerName").value.trim();
     const userId = document.getElementById("userId").value.trim();
     const password = document.getElementById("password").value.trim();
     const actPositions = document.getElementById("actPositions").value.trim();
 
-    if (!userId || !password) {
+    if (!dealerName || !userId || !password) {
       alert("Please fill all required fields.");
       return;
     }
@@ -84,6 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "test-sheet": {
         inputs: [
           {
+            dealerName,
             userId,
             password,
             activePositions: actPositions
