@@ -74,7 +74,7 @@ async function tryOutfilters(page, action) {
     }
 
     logger.debug("Clicked Next record set, waiting for table to load...");
-    await sleep(1500); 
+    await sleep(1500);
   }
 
   logger.warn("Element not found after all pages:", action.selector);
@@ -127,7 +127,7 @@ async function runAction(sheetId, page, action) {
           "{{searchText}}",
           action.searchText
         );
-        
+
         try {
           await page.waitForFunction(
             (xpath) => {
@@ -143,7 +143,7 @@ async function runAction(sheetId, page, action) {
             { timeout: 60000 },
             action.selector
           );
-          
+
 
           await page.evaluate((searchText) => {
             const links = Array.from(document.querySelectorAll("a")).filter(
@@ -156,7 +156,7 @@ async function runAction(sheetId, page, action) {
 
             links.forEach((link, index) => {
               const onclickCode = link.getAttribute("onclick");
-              if (onclickCode) {               
+              if (onclickCode) {
                 if (onclickCode.trim().startsWith("return")) {
                   const code = onclickCode.replace(/^return\s+/, "");
                   eval(code);
@@ -197,7 +197,13 @@ async function runAction(sheetId, page, action) {
               );
             }
           }
-          await page.click(action.selector);
+          await page. waitForSelector(action.selector, {
+            visible: true,
+            timeout: 60000,
+          });
+          await page.click(action.selector, {
+            button: action.button || "left"
+          });
           if (action.initiatesDownload) {
 
             const client = await page.createCDPSession();
@@ -206,7 +212,7 @@ async function runAction(sheetId, page, action) {
               downloadPath: reportDownloadDir,
               eventsEnabled: true,
             });
-            
+
             const prefix = action.filePrefix || "";
             const readableDate = format(new Date(), "yyyyMMdd_HHmmss");
             const creds = configManager.getCurrentRunInputs(sheetId);
@@ -261,7 +267,7 @@ async function runAction(sheetId, page, action) {
         await page.keyboard.press(action.key, { delay: 100 });
       }
       break;
-    
+
     case "select":
       try {
         await page.waitForSelector(action.selector, {
@@ -292,7 +298,7 @@ async function runActions(sheetId, page, actions) {
   for (const action of actions) {
     await runAction(sheetId, page, action);
   }
-  
+
 }
 
 module.exports = { runActions };
