@@ -8,11 +8,9 @@ const configManager = require("./config-manager");
 const { runWorkflow } = require("./automation/workflow");
 const { launchBrowser } = require("./automation/browser");
 const logger = require("./logger");
-const { log } = require("console");
 
 // Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
-console.log("Chrome executable path:", chromePath);
 logger.info("Chrome executable path:", chromePath);
 
 // Base directories
@@ -132,7 +130,7 @@ async function main() {
         logger.info(`\nPosition: ${posName}`);
         logger.info(`RunSheets: ${JSON.stringify(posRunSheets)}`);
 
-        // 1️⃣ Run all sheets once
+        // Run all sheets once
         for (let i = 1; i < sheets.length - 1; i++) {
           const sheet = sheets[i];
           if (
@@ -150,30 +148,21 @@ async function main() {
           });
 
           await runWorkflow(sheet.id, actionSheet, configuration, page);
-          logger.info(`✅ Sheet ${sheet.name} completed (first run).`);
+          logger.info(`Sheet ${sheet.name} completed (first run).`);
         }
-
-        console.log(creds);
 
         const dealerSafe = creds.dealerName.replace(/\W+/g, "_");
         const positionSafe = posName.replace(/\W+/g, "-");
 
-        console.log(dealerSafe);
-        console.log(positionSafe);
-
         const downloadDir = path.join(REPORTS_DIR, dealerSafe, positionSafe);
 
-        console.log("Directory where it is searching", downloadDir);
-
-        // 2️⃣ Check downloads after all sheets
+        // Check downloads after all sheets
         let files = [];
         if (fs.existsSync(downloadDir)) {
           files = fs.readdirSync(downloadDir);
         } else {
           logger.warn(`Download directory missing: ${downloadDir}`);
         }
-
-        console.log("these are the files", files);
 
         const missingSheets = posRunSheets.filter((sheetNum) => {
           const sheetMeta = sheets.find((s) => s.number === sheetNum);
@@ -187,8 +176,6 @@ async function main() {
             .filter(a => a.initiatesDownload && a.filePrefix)
             .map(a => a.filePrefix);
 
-          console.log("these are the download prefixes", downloadPrefixes);
-
           // If sheet has no expected downloads → cannot be missing
           if (downloadPrefixes.length === 0) return false;
 
@@ -200,7 +187,7 @@ async function main() {
           return !hasFile; // missing if no file found
         });
 
-        // 3️⃣ Retry missing downloads
+        // Retry missing downloads
         if (missingSheets.length > 0) {
           logger.warn(
             `Missing downloads for ${posName}: ${missingSheets.join(", ")}`

@@ -67,11 +67,11 @@ app.whenReady().then(async () => {
             logger.info(`Running for position: ${pos}`);
 
             // Pass the exact current runInputs to runActions
-            console.log(`[DEBUG] Current run inputs for sheet ${sheetId}:`, runInputs);
+            console.log(`Current run inputs for sheet ${sheetId}:`, runInputs);
             try {
               await automation.start({
                 ...sheet.config,
-                inputs: runInputs,  // make sure automation uses this
+                inputs: runInputs,
               });
             }
             catch (err) {
@@ -82,7 +82,7 @@ app.whenReady().then(async () => {
           // Normal sheet without multiple positions
           configManager.setCurrentRunInputs(sheetId, creds);
 
-          console.log(`[DEBUG] Current run inputs for sheet ${sheetId}:`, creds);
+          console.log(`Current run inputs for sheet ${sheetId}:`, creds);
 
           try {
             await automation.start({
