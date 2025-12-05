@@ -54,44 +54,44 @@ app.whenReady().then(async () => {
       const credsArray = userInputs[sheetId]?.inputs || [];
 
       for (const creds of credsArray) {
-        logger.info(`🚀 Running sheet "${sheetId}" for user "${creds.userId}"`);
+        logger.info(`Running sheet "${sheetId}" for user "${creds.userId}"`);
 
         // If multiple activePositions exist
         if (Array.isArray(creds.activePositions) && creds.activePositions.length > 0) {
           for (const pos of creds.activePositions) {
             const runInputs = { ...creds, activePosition: pos };
 
-            // ✅ Set current run inputs for this iteration
+            // Set current run inputs for this iteration
             configManager.setCurrentRunInputs(sheetId, runInputs);
 
-            logger.info(`➡️ Running for position: ${pos}`);
+            logger.info(`Running for position: ${pos}`);
 
             // Pass the exact current runInputs to runActions
-            console.log(`[DEBUG] Current run inputs for sheet ${sheetId}:`, runInputs);
+            console.log(`Current run inputs for sheet ${sheetId}:`, runInputs);
             try {
               await automation.start({
                 ...sheet.config,
-                inputs: runInputs,  // make sure automation uses this
+                inputs: runInputs,
               });
             }
             catch (err) {
-              logger.error(`❌ Failed for ${creds.userId} - ${pos}:`, err);
+              logger.error(`Failed for ${creds.userId} - ${pos}:`, err);
             }
           }
         } else {
           // Normal sheet without multiple positions
           configManager.setCurrentRunInputs(sheetId, creds);
 
-          console.log(`[DEBUG] Current run inputs for sheet ${sheetId}:`, creds);
+          console.log(`Current run inputs for sheet ${sheetId}:`, creds);
 
           try {
             await automation.start({
               ...sheet.config,
               inputs: creds,
             });
-            logger.info(`✅ Completed for ${creds.userId}`);
+            logger.info(`Completed for ${creds.userId}`);
           } catch (err) {
-            logger.error(`❌ Failed for ${creds.userId}:`, err);
+            logger.error(`Failed for ${creds.userId}:`, err);
           }
         }
       }

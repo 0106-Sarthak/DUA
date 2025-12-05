@@ -11,7 +11,6 @@ const logger = require("./logger");
 
 // Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
-console.log("Chrome executable path:", chromePath);
 logger.info("Chrome executable path:", chromePath);
 
 // Base directories
@@ -27,6 +26,13 @@ const LOGS_DIR = path.join(BASE_DIR, "logs");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
 );
+
+function loadSheetFile(sheetIdOrName) {
+  const sheetPath = path.join(ACTION_SHEETS_DIR, `${sheetIdOrName}.json`);
+  if (!fs.existsSync(sheetPath)) return null;
+
+  return JSON.parse(fs.readFileSync(sheetPath, "utf8"));
+}
 
 // Config & user input files
 const configFilePath = path.join(CONFIG_DIR, "config.json");
@@ -56,7 +62,7 @@ let busy = false;
 
 async function main() {
   if (busy) {
-    logger.info("Automation already running, skipping this run.");
+    logger.info("Automation already running, skipping.");
     return;
   }
   busy = true;
@@ -65,126 +71,162 @@ async function main() {
 
   try {
     if (!fs.existsSync(configFilePath)) {
-      logger.error("Configuration file not found at", configFilePath);
+      logger.error("Configuration file not found:", configFilePath);
       busy = false;
       return;
     }
 
     configuration = JSON.parse(fs.readFileSync(configFilePath, "utf8"));
-
     await refreshUserInput();
 
     // Extract all unique users
     const allUsers = {};
     for (const [sheetId, sheetData] of Object.entries(userInputStore)) {
       for (const creds of sheetData.inputs || []) {
-        const key = creds.userId || creds.username;
+        const key = creds.userId;
         if (!allUsers[key]) allUsers[key] = creds;
       }
     }
-    
-    // const runSheets = [0, 2, 5];
-    
 
     for (const [userKey, creds] of Object.entries(allUsers)) {
       logger.info(`=== Starting run for ${userKey} ===`);
-      const runSheets = creds.runSheets;
+
       const { browser: userBrowser, page } = await launchBrowser();
       browser = userBrowser;
 
-      const positions =
-        creds.activePositions?.length > 0 ? creds.activePositions : [null];
-
       const sheets = configuration.action_sheets;
+      const loginSheet = sheets[0];
+      const logoutSheet = sheets[sheets.length - 1];
 
-      const loginSheet = sheets[0]; // sheet-1
-      const logoutSheet = sheets[sheets.length - 1]; // sheet-N (last)
-
-      // ---------------------------
-      // LOGIN ONCE
-      // ---------------------------
+      // ------------------------ LOGIN ------------------------
       {
-        const sheet = loginSheet;
-        const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
-
+        const sheetPath = path.join(
+          ACTION_SHEETS_DIR,
+          loginSheet.name + ".json"
+        );
         const actionSheet = forget(sheetPath);
-        configManager.setCurrentRunInputs(sheet.id, creds);
 
-        logger.info(`LOGIN: Running ${sheet.name}`);
-
+        configManager.setCurrentRunInputs(loginSheet.id, creds);
+        logger.info(`LOGIN: Running ${loginSheet.name}`);
         const success = await runWorkflow(
-          sheet.id,
+          loginSheet.id,
           actionSheet,
           configuration,
           page
         );
+
         if (!success) {
-          logger.error(`Login failed`);
+          logger.error("Login failed");
           await userBrowser.close();
           continue;
         }
       }
 
-      // ---------------------------
-      // RUN REPORTS FOR EACH POSITION
-      // ---------------------------
-      for (const position of positions) {
-        logger.info(`\nPosition: ${position}`);
+      // ------------------------ RUN SHEETS PER POSITION ------------------------
+      for (const posObj of creds.positions) {
+        const posName = posObj.position;
+        const posRunSheets = posObj.runSheets ?? [];
 
+        logger.info(`\nPosition: ${posName}`);
+        logger.info(`RunSheets: ${JSON.stringify(posRunSheets)}`);
+
+        // Run all sheets once
         for (let i = 1; i < sheets.length - 1; i++) {
           const sheet = sheets[i];
-
-          const sheetNumber = sheet.number;
-
-          // skip if sheet.number not in runSheets
           if (
-            sheetNumber !== undefined &&
-            runSheets.length > 0 &&
-            !runSheets.includes(sheetNumber)
-          ) {
+            sheet.number !== undefined &&
+            !posRunSheets.includes(sheet.number)
+          )
             continue;
-          }
 
-          const pathToSheet = path.join(
-            ACTION_SHEETS_DIR,
-            sheet.name + ".json"
-          );
-          const actionSheet = forget(pathToSheet);
+          const sheetPath = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
+          const actionSheet = forget(sheetPath);
 
           configManager.setCurrentRunInputs(sheet.id, {
             ...creds,
-            activePosition: position,
+            activePosition: posName,
           });
 
-          logger.info(`Running ${sheet.name} @ ${position}`);
+          await runWorkflow(sheet.id, actionSheet, configuration, page);
+          logger.info(`Sheet ${sheet.name} completed (first run).`);
+        }
 
-          const success = await runWorkflow(
-            sheet.id,
-            actionSheet,
-            configuration,
-            page
+        const dealerSafe = creds.dealerName.replace(/\W+/g, "_");
+        const positionSafe = posName.replace(/\W+/g, "-");
+
+        const downloadDir = path.join(REPORTS_DIR, dealerSafe, positionSafe);
+
+        // Check downloads after all sheets
+        let files = [];
+        if (fs.existsSync(downloadDir)) {
+          files = fs.readdirSync(downloadDir);
+        } else {
+          logger.warn(`Download directory missing: ${downloadDir}`);
+        }
+
+        const missingSheets = posRunSheets.filter((sheetNum) => {
+          const sheetMeta = sheets.find((s) => s.number === sheetNum);
+          if (!sheetMeta) return false;
+
+          // load actual sheet file
+          const sheetFull = loadSheetFile(sheetMeta.name || sheetMeta.id);
+          if (!sheetFull) return false;
+
+          const downloadPrefixes = (sheetFull.actions || [])
+            .filter(a => a.initiatesDownload && a.filePrefix)
+            .map(a => a.filePrefix);
+
+          // If sheet has no expected downloads → cannot be missing
+          if (downloadPrefixes.length === 0) return false;
+
+          // Otherwise check if folder has a file for any prefix
+          const hasFile = files.some((f) =>
+            downloadPrefixes.some((pref) => f.includes(pref))
           );
 
-          if (!success) {
-            logger.error(`Failed at ${sheet.name}`);
-            break;
+          return !hasFile; // missing if no file found
+        });
+
+        // Retry missing downloads
+        if (missingSheets.length > 0) {
+          logger.warn(
+            `Missing downloads for ${posName}: ${missingSheets.join(", ")}`
+          );
+
+          for (const missingSheetNum of missingSheets) {
+            const sheet = sheets.find((s) => s.number === missingSheetNum);
+            if (!sheet) continue;
+
+            const sheetPath = path.join(
+              ACTION_SHEETS_DIR,
+              sheet.name + ".json"
+            );
+            const actionSheet = forget(sheetPath);
+
+            configManager.setCurrentRunInputs(sheet.id, {
+              ...creds,
+              activePosition: posName,
+            });
+
+            logger.info(`Retrying missing sheet ${sheet.name} @ ${posName}`);
+            await runWorkflow(sheet.id, actionSheet, configuration, page);
           }
+        } else {
+          logger.info(`All downloads present for ${posName}`);
         }
       }
 
-      // ---------------------------
-      // LOGOUT ONCE
-      // ---------------------------
+      // ------------------------ LOGOUT ------------------------
       {
-        const sheet = logoutSheet;
-        const pathToSheet = path.join(ACTION_SHEETS_DIR, sheet.name + ".json");
-        const actionSheet = forget(pathToSheet);
+        const sheetPath = path.join(
+          ACTION_SHEETS_DIR,
+          logoutSheet.name + ".json"
+        );
+        const actionSheet = forget(sheetPath);
 
-        configManager.setCurrentRunInputs(sheet.id, creds);
-
-        logger.info(`LOGOUT: Running ${sheet.name}`);
-
-        await runWorkflow(sheet.id, actionSheet, configuration, page);
+        configManager.setCurrentRunInputs(logoutSheet.id, creds);
+        logger.info(`LOGOUT: Running ${logoutSheet.name}`);
+        await runWorkflow(logoutSheet.id, actionSheet, configuration, page);
       }
 
       await userBrowser.close();
@@ -193,10 +235,7 @@ async function main() {
   } catch (err) {
     logger.error("Error in main:", err.message);
   } finally {
-    if (browser) {
-      logger.info("Closing leftover browser...");
-      await browser.close();
-    }
+    if (browser) await browser.close();
     busy = false;
   }
 }
