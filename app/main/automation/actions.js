@@ -5,7 +5,7 @@ const reportDownloadDir = require("../constants").reportDownloadDir;
 const logger = require("../logger");
 
 function sleep(ms) {
-  console.log(`[DEBUG] sleep called with ms: ${ms}`);
+  console.log(`sleep called with ms: ${ms}`);
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -181,7 +181,7 @@ async function runAction(sheetId, page, action) {
             });
           }, action.searchText);
         } catch (err) {
-          logger.error("[DEBUG] Error waiting for XPath:", err);
+          logger.error("Error waiting for XPath:", err);
         }
       } else {
         logger.debug(`Waiting for selector: ${action.selector}`);
@@ -193,7 +193,7 @@ async function runAction(sheetId, page, action) {
               break;
             } else {
               logger.debug(
-                "[DEBUG] Dynamic element not found after pagination, continuing normal click."
+                "Dynamic element not found after pagination, continuing normal click."
               );
             }
           }
@@ -218,7 +218,7 @@ async function runAction(sheetId, page, action) {
               readableDate + "-" + prefix + "-",
               creds
             );
-            logger.debug("[DEBUG] Download completed:", finalFilePath);
+            logger.debug("Download completed:", finalFilePath);
             await client.detach();
           }
         } catch (err) {
@@ -253,7 +253,7 @@ async function runAction(sheetId, page, action) {
         await page.click(step.selector);
       }
 
-      logger.debug("[DEBUG] Logout action completed.");
+      logger.debug("Logout action completed.");
       break;
 
     case "keyboard":
@@ -277,15 +277,15 @@ async function runAction(sheetId, page, action) {
           }
         }, action.selector);
       } catch (err) {
-        logger.error("[DEBUG] Error executing select action:", err);
+        logger.error("Error executing select action:", err);
       }
       break;
 
     default:
-      logger.debug(`[DEBUG] Unknown action type: ${action.type}`);
+      logger.debug(`Unknown action type: ${action.type}`);
       break;
   }
-  logger.debug("[DEBUG] runAction completed for type:", action.type);
+  logger.debug("runAction completed for type:", action.type);
 }
 
 async function runActions(sheetId, page, actions) {
