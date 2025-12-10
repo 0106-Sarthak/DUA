@@ -8,6 +8,7 @@ const configManager = require("./config-manager");
 const { runWorkflow } = require("./automation/workflow");
 const { launchBrowser } = require("./automation/browser");
 const logger = require("./logger");
+const { uploadAllFilesInFolder } = require("../services/api");
 
 // Chrome path (Windows)
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
@@ -56,9 +57,13 @@ const refreshUserInput = async () => {
   }
 };
 
+let currentDownloadDir = path.join(REPORTS_DIR, "MG_Motors/TMCV-Par-N-DEL-1009400-Hissar-DPM");
+
+
 // Main automation loop
 let configuration;
 let busy = false;
+
 
 async function main() {
   if (busy) {
@@ -155,6 +160,8 @@ async function main() {
         const positionSafe = posName.replace(/\W+/g, "-");
 
         const downloadDir = path.join(REPORTS_DIR, dealerSafe, positionSafe);
+        currentDownloadDir = downloadDir.toString();
+        console.log("Setted up current download dir");
 
         // Check downloads after all sheets
         let files = [];
@@ -210,11 +217,16 @@ async function main() {
 
             logger.info(`Retrying missing sheet ${sheet.name} @ ${posName}`);
             await runWorkflow(sheet.id, actionSheet, configuration, page);
+
+            console.log("Here is current dealer and position",downloadDir);
+            currentDownloadDir = downloadDir;
+            console.log("Setted up current download dir");
           }
         } else {
           logger.info(`All downloads present for ${posName}`);
         }
       }
+      
 
       // ------------------------ LOGOUT ------------------------
       {
@@ -244,6 +256,8 @@ async function start() {
   logger.info("Automation started...");
   await main();
   logger.info("Automation finished. Exiting...");
+  const folderToUpload = currentDownloadDir;
+  await uploadAllFilesInFolder(folderToUpload);
   process.exit(0);
 }
 

@@ -7,6 +7,8 @@ const superagent = require("superagent");
 const BASE_DIR = "C:\\dua-data";
 const actionSheetsDir = path.join(BASE_DIR, "sheets");
 
+const FormData = require("form-data");
+
 async function fetchRemoteSheets(userId) {
   console.log("Fetching sheets for user:", userId);
 
@@ -52,5 +54,60 @@ async function fetchRemoteSheets(userId) {
   return sheets;
 }
 
-module.exports = { fetchRemoteSheets };
 
+const axios = require("axios");
+
+async function sendFile(filePath) {
+  console.log("Starting upload:", filePath);
+
+  const form = new FormData();
+  form.append("file", fs.createReadStream(filePath));
+
+  try {
+    const res = await axios.post("http://localhost:4000/util/upload", form, {
+      headers: form.getHeaders(),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      timeout: 20000   // 20 sec timeout
+    });
+    
+    console.log("Upload finished:", filePath);
+  } catch (err) {
+    console.error("Upload failed:", filePath, err.message);
+  }
+}
+
+
+async function uploadAllFilesInFolder(folderPath) {
+  try {
+    const files = fs.readdirSync(folderPath);
+
+    if (files.length === 0) {
+      console.log("No files found in folder:", folderPath);
+      return;
+    }
+
+    console.log(`Uploading ${files.length} files from folder: ${folderPath}`);
+
+    for (const file of files) {
+      const fullPath = path.join(folderPath, file);
+
+      // Skip directories
+      if (fs.lstatSync(fullPath).isDirectory()) {
+        console.log("Skipping directory:", file);
+        continue;
+      }
+
+      console.log("Uploading file:", fullPath);
+      await sendFile(fullPath); // upload function
+    }
+
+    console.log("All files uploaded.");
+
+  } catch (err) {
+    console.error("Error uploading folder files:", err);
+  }
+}
+
+
+module.exports = { fetchRemoteSheets, uploadAllFilesInFolder};
